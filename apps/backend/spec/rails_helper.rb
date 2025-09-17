@@ -9,6 +9,7 @@ abort('The Rails environment is running in production mode!') if Rails.env.produ
 require 'rspec/rails'
 require 'sidekiq/testing'
 Sidekiq::Testing.inline!
+require 'devise/jwt/test_helpers'
 
 Rails.root.glob('spec/support/**/*.rb').sort.each { |file| require file }
 
@@ -24,6 +25,8 @@ RSpec.configure do |config|
   config.infer_spec_type_from_file_location!
   config.filter_rails_from_backtrace!
   config.include FactoryBot::Syntax::Methods
+  config.include JsonHelpers, type: :request
+  config.include AuthHelpers, type: :request
 
   config.before(:each) { Sidekiq::Worker.clear_all }
 end

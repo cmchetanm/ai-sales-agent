@@ -5,7 +5,12 @@ ENV_FILE := ops/env/.env.$(ENV)
 
 DOCKER_COMPOSE := docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE)
 
-.PHONY: help bootstrap up down logs ps build lint test clean
+BACKEND_SERVICE := backend
+EMAILING_SERVICE := emailing
+FRONTEND_SERVICE := frontend
+LLM_SERVICE := llm_service
+
+.PHONY: help bootstrap up down logs ps build lint test clean db-prepare seed backend-test emailing-test llm-test frontend-test test-all
 
 help:
 	@echo "Available targets:"
@@ -15,12 +20,17 @@ help:
 	@echo "  make logs ENV=development         # Tail logs"
 	@echo "  make ps ENV=development           # Show container status"
 	@echo "  make build ENV=development        # Rebuild images"
+	@echo "  make db-prepare                   # Run database migrations/seeds"
+	@echo "  make backend-test                 # Run backend API test suite"
+	@echo "  make emailing-test                # Run emailing service test suite"
+	@echo "  make frontend-test                # Install deps & run frontend checks"
+	@echo "  make test-all                     # Run all available test suites"
 	@echo "  make lint                         # Run all linters (placeholder)"
-	@echo "  make test                         # Run all test suites (placeholder)"
 
 bootstrap:
 	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
-	@echo "Bootstrap tasks will be implemented as services come online."
+	$(MAKE) db-prepare
+	@echo "Bootstrap complete for $(ENV)."
 
 up:
 	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
@@ -48,8 +58,31 @@ build:
 lint:
 	@echo "TODO: Implement repo-wide lint runner."
 
-test:
-	@echo "TODO: Implement repo-wide test runner to ensure 80%+ coverage."
+db-prepare:
+	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
+	@$(DOCKER_COMPOSE) run --rm $(BACKEND_SERVICE) bundle exec rails db:prepare
+	@$(DOCKER_COMPOSE) run --rm $(EMAILING_SERVICE) bundle exec rails db:prepare
+
+seed:
+	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
+	@$(DOCKER_COMPOSE) run --rm $(BACKEND_SERVICE) bundle exec rails db:seed
+
+backend-test:
+	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
+	@$(DOCKER_COMPOSE) run --rm $(BACKEND_SERVICE) bundle exec rspec
+
+emailing-test:
+	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
+	@$(DOCKER_COMPOSE) run --rm $(EMAILING_SERVICE) bundle exec rspec
+
+llm-test:
+	@echo "TODO: add python test command (pytest) once implemented"
+
+frontend-test:
+	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
+	@$(DOCKER_COMPOSE) run --rm $(FRONTEND_SERVICE) sh -lc "pnpm install --frozen-lockfile && pnpm run build"
+
+test-all: backend-test emailing-test llm-test frontend-test
 
 clean:
 	@$(DOCKER_COMPOSE) down -v --remove-orphans

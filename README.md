@@ -21,15 +21,16 @@ Detailed setup instructions will be added as the individual services are impleme
 ### Local runtime quick start
 
 - Install Docker and ensure it is running.
-- Prepare the shared Postgres database (this runs migrations for both Rails services):
-  `docker compose --env-file ops/env/.env.development -f ops/compose/docker-compose.dev.yml run --rm backend bundle exec rails db:prepare`
-  `docker compose --env-file ops/env/.env.development -f ops/compose/docker-compose.dev.yml run --rm emailing bundle exec rails db:prepare`
+- Prepare the shared Postgres database (runs migrations for both Rails services):
+  `make db-prepare ENV=development`
 - Boot the full stack (API, emailing, LLM service, frontend, Redis, Postgres, Qdrant):
-  `docker compose --env-file ops/env/.env.development -f ops/compose/docker-compose.dev.yml up`
+  `make up ENV=development`
 - Visit `http://localhost:5173` for the frontend and `http://localhost:3000/api/v1/health` for the backend health probe.
-- When finished, stop everything with `docker compose --env-file ops/env/.env.development -f ops/compose/docker-compose.dev.yml down`.
+- When finished, stop everything with `make down ENV=development`.
 
 ### Testing
 
-- Backend API specs: `docker compose --env-file ops/env/.env.development -f ops/compose/docker-compose.dev.yml run --rm backend bundle exec rspec`
-- Emailing service specs: `docker compose --env-file ops/env/.env.development -f ops/compose/docker-compose.dev.yml run --rm emailing bundle exec rspec`
+- Backend API specs: `make backend-test`
+- Emailing service specs: `make emailing-test`
+- Frontend build check: `make frontend-test`
+- Run everything (including placeholder services): `make test-all`

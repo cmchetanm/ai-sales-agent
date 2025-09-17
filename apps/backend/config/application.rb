@@ -20,6 +20,7 @@ module Backend
     config.active_record.default_timezone = :utc
     config.active_record.schema_format = :sql
     config.active_job.queue_adapter = :sidekiq
+    config.active_record.dump_schema_after_migration = false
 
     config.generators do |g|
       g.test_framework :rspec
