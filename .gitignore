@@ -1,0 +1,47 @@
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+yarn.lock
+package-lock.json
+pnpm-lock.yaml
+
+# Ruby / Rails
+log/
+tmp/
+public/assets/
+public/packs/
+public/packs-test/
+coverage/
+**/coverage/
+.bundle/
+.byebug_history
+/db/*.sqlite3
+/db/*.sqlite3-journal
+**/vendor/bundle/
+/vendor/bundle
+/storage
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pytest_cache
+.mypy_cache
+.venv/
+.env/
+
+# Env files
+ops/env/.env.*.local
+ops/env/.env.*.secrets
+
+# Docker
+*.pid
+*.log
+
+# IDE / Editors
+.vscode/
+.idea/
+*.swp

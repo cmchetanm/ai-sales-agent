@@ -1,0 +1,111 @@
+services:
+  backend:
+    build:
+      context: ../../apps/backend
+      dockerfile: Dockerfile
+    env_file:
+      - ../env/.env.staging
+    environment:
+      DATABASE_URL: postgres://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@db:$${POSTGRES_PORT}/$${POSTGRES_DB}
+      REDIS_URL: $${REDIS_URL}
+    depends_on:
+      - db
+      - redis
+      - qdrant
+    ports:
+      - "3000:3000"
+    command: ["bash", "-lc", "bundle exec rails server -b 0.0.0.0 -e staging"]
+
+  backend_sidekiq:
+    build:
+      context: ../../apps/backend
+      dockerfile: Dockerfile
+    env_file:
+      - ../env/.env.staging
+    depends_on:
+      - backend
+      - redis
+    command: ["bash", "-lc", "bundle exec sidekiq -e staging"]
+
+  emailing:
+    build:
+      context: ../../apps/emailing
+      dockerfile: Dockerfile
+    env_file:
+      - ../env/.env.staging
+    environment:
+      DATABASE_URL: postgres://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@db:$${POSTGRES_PORT}/$${POSTGRES_DB}
+      REDIS_URL: $${REDIS_EMAILING_URL}
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "4000:4000"
+    command: ["bash", "-lc", "bundle exec rails server -b 0.0.0.0 -p 4000 -e staging"]
+
+  emailing_sidekiq:
+    build:
+      context: ../../apps/emailing
+      dockerfile: Dockerfile
+    env_file:
+      - ../env/.env.staging
+    depends_on:
+      - emailing
+      - redis
+    command: ["bash", "-lc", "bundle exec sidekiq -e staging"]
+
+  frontend:
+    build:
+      context: ../../apps/frontend
+      dockerfile: Dockerfile
+    env_file:
+      - ../env/.env.staging
+    depends_on:
+      - backend
+      - llm_service
+    ports:
+      - "80:4173"
+    command: ["bash", "-lc", "pnpm install --frozen-lockfile && pnpm build && pnpm preview --host 0.0.0.0 --port 4173"]
+
+  llm_service:
+    build:
+      context: ../../apps/llm_service
+      dockerfile: Dockerfile
+    env_file:
+      - ../env/.env.staging
+    depends_on:
+      - qdrant
+    ports:
+      - "8000:8000"
+    command: ["bash", "-lc", "uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  db:
+    image: ankane/pgvector:latest
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+
+volumes:
+  redis-data:
+  postgres-data:
+  qdrant-data:
