@@ -6,7 +6,6 @@ services:
     env_file:
       - ../env/.env.staging
     environment:
-      DATABASE_URL: postgres://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@db:$${POSTGRES_PORT}/$${POSTGRES_DB}
       REDIS_URL: $${REDIS_URL}
     depends_on:
       - db
@@ -34,7 +33,6 @@ services:
     env_file:
       - ../env/.env.staging
     environment:
-      DATABASE_URL: postgres://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@db:$${POSTGRES_PORT}/$${POSTGRES_DB}
       REDIS_URL: $${REDIS_EMAILING_URL}
     depends_on:
       - db

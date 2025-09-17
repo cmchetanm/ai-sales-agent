@@ -6,7 +6,6 @@ services:
     env_file:
       - ../env/.env.development
     environment:
-      DATABASE_URL: postgres://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@db:$${POSTGRES_PORT}/$${POSTGRES_DB}
       REDIS_URL: $${REDIS_URL}
     volumes:
       - ../../apps/backend:/app
@@ -40,7 +39,6 @@ services:
     env_file:
       - ../env/.env.development
     environment:
-      DATABASE_URL: postgres://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@db:$${POSTGRES_PORT}/$${POSTGRES_DB}
       REDIS_URL: $${REDIS_EMAILING_URL}
     volumes:
       - ../../apps/emailing:/app
