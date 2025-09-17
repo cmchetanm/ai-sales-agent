@@ -21,7 +21,7 @@ Detailed setup instructions will be added as the individual services are impleme
 ### Local runtime quick start
 
 - Install Docker and ensure it is running.
-- Prepare the databases (runs migrations for the API and emailing services):
+- Prepare the shared Postgres database (this runs migrations for both Rails services):
   `docker compose --env-file ops/env/.env.development -f ops/compose/docker-compose.dev.yml run --rm backend bundle exec rails db:prepare`
   `docker compose --env-file ops/env/.env.development -f ops/compose/docker-compose.dev.yml run --rm emailing bundle exec rails db:prepare`
 - Boot the full stack (API, emailing, LLM service, frontend, Redis, Postgres, Qdrant):

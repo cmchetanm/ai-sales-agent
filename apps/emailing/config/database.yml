@@ -12,16 +12,16 @@ default: &default
 
 development:
   <<: *default
-  database: <%= ENV.fetch("POSTGRES_DB", "emailing_service_development") %>
+  database: <%= ENV.fetch("POSTGRES_DB", "ai_sales_agent_development") %>
 
 test:
   <<: *default
-  database: <%= ENV.fetch("POSTGRES_TEST_DB", "emailing_service_test") %>
+  database: <%= ENV.fetch("POSTGRES_TEST_DB", "ai_sales_agent_test") %>
 
 staging:
   <<: *default
-  database: <%= ENV.fetch("POSTGRES_DB", "emailing_service_staging") %>
+  database: <%= ENV.fetch("POSTGRES_DB", "ai_sales_agent_staging") %>
 
 production:
   <<: *default
-  database: <%= ENV.fetch("POSTGRES_DB", "emailing_service_production") %>
+  database: <%= ENV.fetch("POSTGRES_DB", "ai_sales_agent_production") %>
