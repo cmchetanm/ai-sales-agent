@@ -12,4 +12,13 @@ RSpec.describe 'API V1 Health', type: :request do
       expect(response.parsed_body).to have_key('timestamp')
     end
   end
+
+  describe 'GET /health' do
+    it 'responds with plain ok status' do
+      get '/health'
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to include('status' => 'ok')
+    end
+  end
 end

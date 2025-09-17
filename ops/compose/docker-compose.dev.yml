@@ -16,7 +16,7 @@ services:
       - qdrant
     ports:
       - "3000:3000"
-    command: ["bash", "-lc", "bundle exec rails server -b 0.0.0.0"]
+    command: ["bash", "-lc", "(bundle check || bundle install) && bundle exec rails server -b 0.0.0.0 -p 3000"]
 
   backend_sidekiq:
     build:
@@ -30,7 +30,7 @@ services:
     depends_on:
       - backend
       - redis
-    command: ["bash", "-lc", "bundle exec sidekiq"]
+    command: ["bash", "-lc", "(bundle check || bundle install) && bundle exec sidekiq"]
 
   emailing:
     build:
@@ -48,7 +48,7 @@ services:
       - redis
     ports:
       - "4000:4000"
-    command: ["bash", "-lc", "bundle exec rails server -b 0.0.0.0 -p 4000"]
+    command: ["bash", "-lc", "(bundle check || bundle install) && bundle exec rails server -b 0.0.0.0 -p 4000"]
 
   emailing_sidekiq:
     build:
@@ -62,7 +62,7 @@ services:
     depends_on:
       - emailing
       - redis
-    command: ["bash", "-lc", "bundle exec sidekiq"]
+    command: ["bash", "-lc", "(bundle check || bundle install) && bundle exec sidekiq"]
 
   frontend:
     build:
@@ -78,7 +78,7 @@ services:
       - llm_service
     ports:
       - "5173:5173"
-    command: ["bash", "-lc", "pnpm install && pnpm dev --host 0.0.0.0"]
+    command: ["sh", "-lc", "pnpm install && pnpm dev --host 0.0.0.0"]
 
   llm_service:
     build:
@@ -88,12 +88,11 @@ services:
       - ../env/.env.development
     volumes:
       - ../../apps/llm_service:/app
-      - llm-venv:/opt/venv
     depends_on:
       - qdrant
     ports:
       - "8000:8000"
-    command: ["bash", "-lc", "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
+    command: ["sh", "-lc", ". /opt/venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
 
   redis:
     image: redis:7.2-alpine
@@ -125,7 +124,6 @@ volumes:
   bundle-cache:
   emailing-bundle-cache:
   frontend-node-modules:
-  llm-venv:
   redis-data:
   postgres-data:
   qdrant-data:

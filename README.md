@@ -18,8 +18,18 @@ Consult the `Makefile` for common workflows. Each environment (`development`, `s
 
 Detailed setup instructions will be added as the individual services are implemented.
 
-### Backend API quick start
+### Local runtime quick start
 
 - Install Docker and ensure it is running.
-- Run `docker compose --env-file ops/env/.env.development -f ops/compose/docker-compose.dev.yml run --rm backend bundle exec rails db:prepare` to prepare databases.
-- Execute tests with `docker compose --env-file ops/env/.env.development -f ops/compose/docker-compose.dev.yml run --rm backend bundle exec rspec`.
+- Prepare the databases (runs migrations for the API and emailing services):
+  `docker compose --env-file ops/env/.env.development -f ops/compose/docker-compose.dev.yml run --rm backend bundle exec rails db:prepare`
+  `docker compose --env-file ops/env/.env.development -f ops/compose/docker-compose.dev.yml run --rm emailing bundle exec rails db:prepare`
+- Boot the full stack (API, emailing, LLM service, frontend, Redis, Postgres, Qdrant):
+  `docker compose --env-file ops/env/.env.development -f ops/compose/docker-compose.dev.yml up`
+- Visit `http://localhost:5173` for the frontend and `http://localhost:3000/api/v1/health` for the backend health probe.
+- When finished, stop everything with `docker compose --env-file ops/env/.env.development -f ops/compose/docker-compose.dev.yml down`.
+
+### Testing
+
+- Backend API specs: `docker compose --env-file ops/env/.env.development -f ops/compose/docker-compose.dev.yml run --rm backend bundle exec rspec`
+- Emailing service specs: `docker compose --env-file ops/env/.env.development -f ops/compose/docker-compose.dev.yml run --rm emailing bundle exec rspec`

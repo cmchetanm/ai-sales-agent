@@ -14,7 +14,7 @@ WORKDIR /app
 COPY requirements.txt /app/requirements.txt
 RUN python -m venv /opt/venv && \
     /opt/venv/bin/pip install --upgrade pip && \
-    /opt/venv/bin/pip install -r requirements.txt || true
+    /opt/venv/bin/pip install -r requirements.txt
 
 COPY . /app
 

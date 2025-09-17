@@ -13,7 +13,7 @@ services:
       - qdrant
     ports:
       - "3000:3000"
-    command: ["bash", "-lc", "bundle exec rails server -b 0.0.0.0 -e production"]
+    command: ["bash", "-lc", "(bundle check || bundle install) && bundle exec rails server -b 0.0.0.0 -e production"]
 
   backend_sidekiq:
     build:
@@ -24,7 +24,7 @@ services:
     depends_on:
       - backend
       - redis
-    command: ["bash", "-lc", "bundle exec sidekiq -e production"]
+    command: ["bash", "-lc", "(bundle check || bundle install) && bundle exec sidekiq -e production"]
 
   emailing:
     build:
@@ -39,7 +39,7 @@ services:
       - redis
     ports:
       - "4000:4000"
-    command: ["bash", "-lc", "bundle exec rails server -b 0.0.0.0 -p 4000 -e production"]
+    command: ["bash", "-lc", "(bundle check || bundle install) && bundle exec rails server -b 0.0.0.0 -p 4000 -e production"]
 
   emailing_sidekiq:
     build:
@@ -50,7 +50,7 @@ services:
     depends_on:
       - emailing
       - redis
-    command: ["bash", "-lc", "bundle exec sidekiq -e production"]
+    command: ["bash", "-lc", "(bundle check || bundle install) && bundle exec sidekiq -e production"]
 
   frontend:
     build:
@@ -63,7 +63,7 @@ services:
       - llm_service
     ports:
       - "80:4173"
-    command: ["bash", "-lc", "pnpm install --frozen-lockfile && pnpm build && pnpm preview --host 0.0.0.0 --port 4173"]
+    command: ["sh", "-lc", "pnpm install --frozen-lockfile && pnpm build && pnpm preview --host 0.0.0.0 --port 4173"]
 
   llm_service:
     build:
@@ -75,7 +75,7 @@ services:
       - qdrant
     ports:
       - "8000:8000"
-    command: ["bash", "-lc", "uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+    command: ["sh", "-lc", ". /opt/venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
 
   redis:
     image: redis:7.2-alpine
