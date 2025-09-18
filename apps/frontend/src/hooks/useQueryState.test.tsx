@@ -18,7 +18,7 @@ function Demo() {
 }
 
 describe('useQueryState', () => {
-  it('reads and writes to query string', () => {
+  it('reads and writes to query string', async () => {
     const ui = render(
       <MemoryRouter initialEntries={[{ pathname: '/', search: '?q=init&page=2' }]}>
         <Demo />
@@ -28,9 +28,10 @@ describe('useQueryState', () => {
     expect(screen.getByTestId('page').textContent).toBe('2');
     fireEvent.click(screen.getByText('setq'));
     fireEvent.click(screen.getByText('setp'));
+    // allow router state to flush
+    await new Promise((r) => setTimeout(r, 0));
     const url = new URL((ui as any).container.ownerDocument.defaultView!.location.href);
     expect(url.searchParams.get('q')).toBe('hello');
     expect(url.searchParams.get('page')).toBe('3');
   });
 });
-
