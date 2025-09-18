@@ -1,5 +1,13 @@
 Rails.application.routes.draw do
   require 'sidekiq/web'
+  begin
+    require 'rack/session'
+  rescue LoadError
+    begin
+      require 'rack/session/cookie'
+    rescue LoadError
+    end
+  end
 
   # Sidekiq Web UI (admin-only via HTTP Basic)
   Sidekiq::Web.use Rack::Session::Cookie, secret: Rails.application.secret_key_base
