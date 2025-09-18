@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
-import { Button, Card, CardContent, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Button, Card, CardContent, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -17,6 +17,8 @@ export const Pipelines = () => {
   const [deleting, setDeleting] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(0);
+  const [orderBy, setOrderBy] = useState<'name' | 'status'>('name');
+  const [order, setOrder] = useState<'asc' | 'desc'>('asc');
 
   const load = async (targetPage = page) => {
     if (!token) return;
@@ -78,13 +80,23 @@ export const Pipelines = () => {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Status</TableCell>
+              <TableCell sortDirection={orderBy === 'name' ? order : false}>
+                <TableSortLabel active={orderBy === 'name'} direction={orderBy === 'name' ? order : 'asc'} onClick={() => setOrder((o) => (orderBy === 'name' ? (o === 'asc' ? 'desc' : 'asc') : 'asc')) || setOrderBy('name')}>
+                  Name
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={orderBy === 'status' ? order : false}>
+                <TableSortLabel active={orderBy === 'status'} direction={orderBy === 'status' ? order : 'asc'} onClick={() => setOrder((o) => (orderBy === 'status' ? (o === 'asc' ? 'desc' : 'asc') : 'asc')) || setOrderBy('status')}>
+                  Status
+                </TableSortLabel>
+              </TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {items.map((p) => (
+            {[...items].sort((a:any,b:any)=>{
+              const key = orderBy; const o = order === 'asc' ? 1 : -1; if(a[key]<b[key]) return -1*o; if(a[key]>b[key]) return 1*o; return 0;
+            }).map((p) => (
               <TableRow key={p.id} hover>
                 <TableCell>{p.name}</TableCell>
                 <TableCell>{p.status}</TableCell>

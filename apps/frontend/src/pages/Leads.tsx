@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
-import { Button, Card, CardContent, IconButton, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Button, Card, CardContent, IconButton, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -19,6 +19,9 @@ export const Leads = () => {
   const [deleting, setDeleting] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(0);
+  const [orderBy, setOrderBy] = useState<'email' | 'status'>('email');
+  const [order, setOrder] = useState<'asc' | 'desc'>('asc');
+  const [status, setStatus] = useState<string>('');
 
   const load = async (targetPage = page) => {
     if (!token) return;
@@ -80,6 +83,10 @@ export const Leads = () => {
           <TextField select size="small" label="Pipeline" value={pipelineId as any} onChange={(e) => setPipelineId((e.target.value as any) || '')} sx={{ minWidth: 220 }}>
             {pipelineOptions.map((p) => <MenuItem key={p.id ?? 'all'} value={p.id}>{p.name}</MenuItem>)}
           </TextField>
+          <TextField select size="small" label="Status" value={status} onChange={(e) => setStatus(e.target.value)} sx={{ minWidth: 180 }}>
+            <MenuItem value="">All</MenuItem>
+            {['new','researching','enriched','outreach','scheduled','responded','won','lost','archived'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+          </TextField>
         </CardContent>
       </Card>
       <Card sx={{ mb: 2 }}>
@@ -92,13 +99,24 @@ export const Leads = () => {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Email</TableCell>
-              <TableCell>Status</TableCell>
+              <TableCell sortDirection={orderBy === 'email' ? order : false}>
+                <TableSortLabel active={orderBy === 'email'} direction={orderBy === 'email' ? order : 'asc'} onClick={() => setOrder((o) => (orderBy === 'email' ? (o === 'asc' ? 'desc' : 'asc') : 'asc')) || setOrderBy('email')}>
+                  Email
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={orderBy === 'status' ? order : false}>
+                <TableSortLabel active={orderBy === 'status'} direction={orderBy === 'status' ? order : 'asc'} onClick={() => setOrder((o) => (orderBy === 'status' ? (o === 'asc' ? 'desc' : 'asc') : 'asc')) || setOrderBy('status')}>
+                  Status
+                </TableSortLabel>
+              </TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {items.map((l) => (
+            {[...items]
+              .filter((l) => !status || l.status === status)
+              .sort((a:any,b:any)=>{ const key = orderBy; const o = order === 'asc' ? 1 : -1; if(a[key]<b[key]) return -1*o; if(a[key]>b[key]) return 1*o; return 0; })
+              .map((l) => (
               <TableRow key={l.id} hover>
                 <TableCell>{l.email}</TableCell>
                 <TableCell>{l.status}</TableCell>
