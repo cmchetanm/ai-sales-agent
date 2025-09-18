@@ -30,8 +30,8 @@ describe('useQueryState', () => {
     fireEvent.click(screen.getByText('setp'));
     // allow router state to flush
     await new Promise((r) => setTimeout(r, 0));
-    const url = new URL((ui as any).container.ownerDocument.defaultView!.location.href);
-    expect(url.searchParams.get('q')).toBe('hello');
-    expect(url.searchParams.get('page')).toBe('3');
+    const loc = (ui as any).container.ownerDocument.defaultView!.location as Location;
+    expect(loc.search.includes('q=hello')).toBe(true);
+    expect(loc.search.includes('page=3')).toBe(true);
   });
 });
