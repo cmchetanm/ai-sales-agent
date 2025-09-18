@@ -81,7 +81,7 @@ export const Campaigns = () => {
             <TableRow>
               <TableCell>Name</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell align=\"right\">Actions</TableCell>
+              <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -89,9 +89,9 @@ export const Campaigns = () => {
               <TableRow key={c.id} hover>
                 <TableCell>{c.name}</TableCell>
                 <TableCell>{c.status}</TableCell>
-                <TableCell align=\"right\"> 
-                  <IconButton size=\"small\" aria-label=\"edit\" onClick={() => setEditing({ id: c.id, name: c.name, status: c.status })}><EditIcon fontSize=\"small\" /></IconButton>
-                  <IconButton size=\"small\" aria-label=\"delete\" onClick={() => setDeleting(c.id)} color=\"error\"><DeleteIcon fontSize=\"small\" /></IconButton>
+                <TableCell align="right"> 
+                  <IconButton size="small" aria-label="edit" onClick={() => setEditing({ id: c.id, name: c.name, status: c.status })}><EditIcon fontSize="small" /></IconButton>
+                  <IconButton size="small" aria-label="delete" onClick={() => setDeleting(c.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                 </TableCell>
               </TableRow>
             ))}
@@ -101,21 +101,21 @@ export const Campaigns = () => {
       <Dialog open={!!editing} onClose={() => setEditing(null)}>
         <DialogTitle>Edit Campaign</DialogTitle>
         <DialogContent sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>
-          <TextField autoFocus margin=\"dense\" fullWidth label=\"Name\" value={editing?.name || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, name: e.target.value } : prev)} />
-          <TextField select label=\"Status\" value={editing?.status || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, status: e.target.value } : prev)}>
+          <TextField autoFocus margin="dense" fullWidth label="Name" value={editing?.name || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, name: e.target.value } : prev)} />
+          <TextField select label="Status" value={editing?.status || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, status: e.target.value } : prev)}>
             {['draft','scheduled','running','paused','completed','archived'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
           </TextField>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditing(null)}>Cancel</Button>
-          <Button onClick={submitEdit} variant=\"contained\">Save</Button>
+          <Button onClick={submitEdit} variant="contained">Save</Button>
         </DialogActions>
       </Dialog>
 
       <ConfirmDialog
         open={deleting != null}
-        title=\"Delete campaign?\"
-        message=\"This cannot be undone.\"
+        title="Delete campaign?"
+        message="This cannot be undone."
         onClose={() => setDeleting(null)}
         onConfirm={confirmDelete}
       />
