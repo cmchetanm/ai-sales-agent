@@ -23,8 +23,8 @@ export const Campaigns = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [page, setPage] = useQueryState('page', 1 as any, 'number');
   const [pages, setPages] = useState(0);
-  const [orderBy, setOrderBy] = useState<'name' | 'status'>('name');
-  const [order, setOrder] = useState<'asc' | 'desc'>('asc');
+  const [orderBy, setOrderBy] = useQueryState('orderBy', 'name');
+  const [order, setOrder] = useQueryState('order', 'asc');
   const [status, setStatus] = useQueryState('status', '');
   const [q, setQ] = useQueryState('q', '');
 
@@ -100,13 +100,13 @@ export const Campaigns = () => {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell sortDirection={orderBy === 'name' ? order : false}>
-                <TableSortLabel active={orderBy === 'name'} direction={orderBy === 'name' ? order : 'asc'} onClick={() => setOrder((o) => (orderBy === 'name' ? (o === 'asc' ? 'desc' : 'asc') : 'asc')) || setOrderBy('name')}>
+              <TableCell sortDirection={orderBy === 'name' ? (order as any) : false}>
+                <TableSortLabel active={orderBy === 'name'} direction={orderBy === 'name' ? (order as any) : 'asc'} onClick={() => setOrder(orderBy === 'name' && order === 'asc' ? 'desc' : 'asc') || setOrderBy('name')}>
                   Name
                 </TableSortLabel>
               </TableCell>
-              <TableCell sortDirection={orderBy === 'status' ? order : false}>
-                <TableSortLabel active={orderBy === 'status'} direction={orderBy === 'status' ? order : 'asc'} onClick={() => setOrder((o) => (orderBy === 'status' ? (o === 'asc' ? 'desc' : 'asc') : 'asc')) || setOrderBy('status')}>
+              <TableCell sortDirection={orderBy === 'status' ? (order as any) : false}>
+                <TableSortLabel active={orderBy === 'status'} direction={orderBy === 'status' ? (order as any) : 'asc'} onClick={() => setOrder(orderBy === 'status' && order === 'asc' ? 'desc' : 'asc') || setOrderBy('status')}>
                   Status
                 </TableSortLabel>
               </TableCell>
@@ -121,7 +121,18 @@ export const Campaigns = () => {
               .map((c) => (
               <TableRow key={c.id} hover>
                 <TableCell>{c.name}</TableCell>
-                <TableCell>{c.status}</TableCell>
+                <TableCell>
+                  <TextField
+                    select size="small" value={c.status}
+                    onChange={async (e) => {
+                      const next = e.target.value;
+                      const res = await api.campaignsUpdate(token!, c.id, { status: next });
+                      if (res.ok) { toast.success('Status updated'); await load(); } else { toast.error('Update failed'); }
+                    }}
+                  >
+                    {['draft','scheduled','running','paused','completed','archived'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                  </TextField>
+                </TableCell>
                 <TableCell align="right"> 
                   <IconButton size="small" aria-label="edit" onClick={() => setEditing({ id: c.id, name: c.name, status: c.status })}><EditIcon fontSize="small" /></IconButton>
                   <IconButton size="small" aria-label="delete" onClick={() => setDeleting(c.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>

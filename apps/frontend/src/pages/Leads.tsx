@@ -23,8 +23,8 @@ export const Leads = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [page, setPage] = useQueryState('page', 1 as any, 'number');
   const [pages, setPages] = useState(0);
-  const [orderBy, setOrderBy] = useState<'email' | 'status'>('email');
-  const [order, setOrder] = useState<'asc' | 'desc'>('asc');
+  const [orderBy, setOrderBy] = useQueryState('orderBy', 'email');
+  const [order, setOrder] = useQueryState('order', 'asc');
   const [status, setStatus] = useQueryState('status', '');
   const [q, setQ] = useQueryState('q', '');
 
@@ -106,13 +106,13 @@ export const Leads = () => {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell sortDirection={orderBy === 'email' ? order : false}>
-                <TableSortLabel active={orderBy === 'email'} direction={orderBy === 'email' ? order : 'asc'} onClick={() => setOrder((o) => (orderBy === 'email' ? (o === 'asc' ? 'desc' : 'asc') : 'asc')) || setOrderBy('email')}>
+              <TableCell sortDirection={orderBy === 'email' ? (order as any) : false}>
+                <TableSortLabel active={orderBy === 'email'} direction={orderBy === 'email' ? (order as any) : 'asc'} onClick={() => setOrder(orderBy === 'email' && order === 'asc' ? 'desc' : 'asc') || setOrderBy('email')}>
                   Email
                 </TableSortLabel>
               </TableCell>
-              <TableCell sortDirection={orderBy === 'status' ? order : false}>
-                <TableSortLabel active={orderBy === 'status'} direction={orderBy === 'status' ? order : 'asc'} onClick={() => setOrder((o) => (orderBy === 'status' ? (o === 'asc' ? 'desc' : 'asc') : 'asc')) || setOrderBy('status')}>
+              <TableCell sortDirection={orderBy === 'status' ? (order as any) : false}>
+                <TableSortLabel active={orderBy === 'status'} direction={orderBy === 'status' ? (order as any) : 'asc'} onClick={() => setOrder(orderBy === 'status' && order === 'asc' ? 'desc' : 'asc') || setOrderBy('status')}>
                   Status
                 </TableSortLabel>
               </TableCell>
@@ -127,7 +127,18 @@ export const Leads = () => {
               .map((l) => (
               <TableRow key={l.id} hover>
                 <TableCell>{l.email}</TableCell>
-                <TableCell>{l.status}</TableCell>
+                <TableCell>
+                  <TextField
+                    select size="small" value={l.status}
+                    onChange={async (e) => {
+                      const next = e.target.value;
+                      const res = await api.leadsUpdate(token!, l.id, { status: next });
+                      if (res.ok) { toast.success('Status updated'); await load(); } else { toast.error('Update failed'); }
+                    }}
+                  >
+                    {['new','researching','enriched','outreach','scheduled','responded','won','lost','archived'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                  </TextField>
+                </TableCell>
                 <TableCell align="right">
                   <IconButton size="small" aria-label="edit" onClick={() => setEditing({ id: l.id, email: l.email })}><EditIcon fontSize="small" /></IconButton>
                   <IconButton size="small" aria-label="delete" onClick={() => setDeleting(l.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>

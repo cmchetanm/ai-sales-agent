@@ -21,8 +21,8 @@ export const Pipelines = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [page, setPage] = useQueryState('page', 1 as any, 'number');
   const [pages, setPages] = useState(0);
-  const [orderBy, setOrderBy] = useState<'name' | 'status'>('name');
-  const [order, setOrder] = useState<'asc' | 'desc'>('asc');
+  const [orderBy, setOrderBy] = useQueryState('orderBy', 'name');
+  const [order, setOrder] = useQueryState('order', 'asc');
   const [q, setQ] = useQueryState('q', '');
 
   const load = async (targetPage = page) => {
@@ -85,13 +85,13 @@ export const Pipelines = () => {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell sortDirection={orderBy === 'name' ? order : false}>
-                <TableSortLabel active={orderBy === 'name'} direction={orderBy === 'name' ? order : 'asc'} onClick={() => setOrder((o) => (orderBy === 'name' ? (o === 'asc' ? 'desc' : 'asc') : 'asc')) || setOrderBy('name')}>
+              <TableCell sortDirection={orderBy === 'name' ? (order as any) : false}>
+                <TableSortLabel active={orderBy === 'name'} direction={orderBy === 'name' ? (order as any) : 'asc'} onClick={() => setOrder(orderBy === 'name' && order === 'asc' ? 'desc' : 'asc') || setOrderBy('name')}>
                   Name
                 </TableSortLabel>
               </TableCell>
-              <TableCell sortDirection={orderBy === 'status' ? order : false}>
-                <TableSortLabel active={orderBy === 'status'} direction={orderBy === 'status' ? order : 'asc'} onClick={() => setOrder((o) => (orderBy === 'status' ? (o === 'asc' ? 'desc' : 'asc') : 'asc')) || setOrderBy('status')}>
+              <TableCell sortDirection={orderBy === 'status' ? (order as any) : false}>
+                <TableSortLabel active={orderBy === 'status'} direction={orderBy === 'status' ? (order as any) : 'asc'} onClick={() => setOrder(orderBy === 'status' && order === 'asc' ? 'desc' : 'asc') || setOrderBy('status')}>
                   Status
                 </TableSortLabel>
               </TableCell>
