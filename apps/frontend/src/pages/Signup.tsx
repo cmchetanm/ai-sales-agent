@@ -24,34 +24,24 @@ export const Signup = () => {
   };
 
   return (
-    <main style={styles.container}>
-      <form onSubmit={onSubmit} style={styles.card}>
-        <h2 style={{ marginBottom: 8 }}>Create account</h2>
-        {error && <div style={styles.error}>{error}</div>}
-        <label style={styles.label}>Account name</label>
-        <input style={styles.input} value={accountName} onChange={(e) => setAccountName(e.target.value)} />
-        <label style={styles.label}>Plan slug</label>
-        <input style={styles.input} value={planSlug} onChange={(e) => setPlanSlug(e.target.value)} />
-        <label style={styles.label}>Email</label>
-        <input style={styles.input} value={email} onChange={(e) => setEmail(e.target.value)} />
-        <label style={styles.label}>Password</label>
-        <input style={styles.input} type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        <label style={styles.label}>Confirm password</label>
-        <input style={styles.input} type="password" value={passwordConfirmation} onChange={(e) => setPasswordConfirmation(e.target.value)} />
-        <button style={styles.button} disabled={loading} type="submit">{loading ? 'Creating…' : 'Create account'}</button>
-        <div style={styles.alt}>Have an account? <Link to="/login">Sign in</Link></div>
+    <main className="min-h-screen flex items-center justify-center p-6">
+      <form onSubmit={onSubmit} className="card w-full max-w-md p-6 space-y-3">
+        <h2 className="text-xl font-semibold">Create account</h2>
+        {error && <div className="rounded-lg border border-red-500/50 bg-red-500/10 text-red-200 px-3 py-2">{error}</div>}
+        <label className="label">Account name</label>
+        <input className="input" value={accountName} onChange={(e) => setAccountName(e.target.value)} />
+        <label className="label">Plan slug</label>
+        <input className="input" value={planSlug} onChange={(e) => setPlanSlug(e.target.value)} />
+        <label className="label">Email</label>
+        <input className="input" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <label className="label">Password</label>
+        <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <label className="label">Confirm password</label>
+        <input className="input" type="password" value={passwordConfirmation} onChange={(e) => setPasswordConfirmation(e.target.value)} />
+        <button className="btn btn-primary w-full" disabled={loading} type="submit">{loading ? 'Creating…' : 'Create account'}</button>
+        <div className="text-sm text-slate-400">Have an account? <Link className="text-brand-400 hover:text-brand-300" to="/login">Sign in</Link></div>
       </form>
     </main>
   );
-};
-
-const styles: Record<string, any> = {
-  container: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0b1220', color: '#e2e8f0' },
-  card: { width: 360, padding: 24, borderRadius: 12, background: '#111827', border: '1px solid #1f2937', display: 'flex', flexDirection: 'column', gap: 8 },
-  label: { fontSize: 12, opacity: 0.8 },
-  input: { padding: '8px 10px', borderRadius: 8, border: '1px solid #374151', background: '#0b1220', color: '#e5e7eb' },
-  button: { marginTop: 8, padding: '10px 12px', borderRadius: 8, border: '1px solid #374151', background: '#1f2937', color: '#e5e7eb', cursor: 'pointer' },
-  alt: { marginTop: 8, fontSize: 12 },
-  error: { background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.35)', padding: 8, borderRadius: 8 }
 };
 

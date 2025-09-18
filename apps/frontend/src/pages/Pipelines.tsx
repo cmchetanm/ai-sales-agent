@@ -26,18 +26,32 @@ export const Pipelines = () => {
   };
 
   return (
-    <div>
-      <h2>Pipelines</h2>
-      <form onSubmit={create} style={{ display: 'flex', gap: 8, margin: '12px 0' }}>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Pipeline name" />
-        <button disabled={loading} type="submit">Create</button>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="page-title">Pipelines</h1>
+      </div>
+      <form onSubmit={create} className="card p-4 flex items-center gap-3">
+        <input className="input max-w-sm" value={name} onChange={(e) => setName(e.target.value)} placeholder="Pipeline name" />
+        <button className="btn btn-primary" disabled={loading} type="submit">Create</button>
       </form>
-      <ul>
-        {items.map((p) => (
-          <li key={p.id}>{p.name} <span style={{ opacity: 0.6 }}>({p.status})</span></li>
-        ))}
-      </ul>
+      <div className="card overflow-hidden">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((p) => (
+              <tr key={p.id} className="border-t border-slate-800/60">
+                <td className="font-medium">{p.name}</td>
+                <td className="text-slate-400">{p.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
-

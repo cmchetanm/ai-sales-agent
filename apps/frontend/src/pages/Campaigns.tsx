@@ -32,22 +32,36 @@ export const Campaigns = () => {
   };
 
   return (
-    <div>
-      <h2>Campaigns</h2>
-      <form onSubmit={create} style={{ display: 'flex', gap: 8, margin: '12px 0' }}>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Campaign name" />
-        <select value={pipelineId as any} onChange={(e) => setPipelineId((e.target.value as any) || '')}>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="page-title">Campaigns</h1>
+      </div>
+      <form onSubmit={create} className="card p-4 flex items-center gap-3">
+        <input className="input max-w-sm" value={name} onChange={(e) => setName(e.target.value)} placeholder="Campaign name" />
+        <select className="input max-w-xs" value={pipelineId as any} onChange={(e) => setPipelineId((e.target.value as any) || '')}>
           <option value="">(No pipeline)</option>
           {pipelines.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
-        <button disabled={loading} type="submit">Create</button>
+        <button className="btn btn-primary" disabled={loading} type="submit">Create</button>
       </form>
-      <ul>
-        {items.map((c) => (
-          <li key={c.id}>{c.name} <span style={{ opacity: 0.6 }}>({c.status})</span></li>
-        ))}
-      </ul>
+      <div className="card overflow-hidden">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((c) => (
+              <tr key={c.id} className="border-t border-slate-800/60">
+                <td className="font-medium">{c.name}</td>
+                <td className="text-slate-400">{c.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
-

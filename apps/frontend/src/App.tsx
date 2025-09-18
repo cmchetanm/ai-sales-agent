@@ -1,6 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
-import { NavBar } from './components/NavBar';
+import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
@@ -8,6 +8,7 @@ import { Pipelines } from './pages/Pipelines';
 import { Leads } from './pages/Leads';
 import { Campaigns } from './pages/Campaigns';
 import { Account } from './pages/Account';
+import { Toaster } from 'sonner';
 
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
   const { token, loading } = useAuth();
@@ -19,6 +20,7 @@ const PrivateRoute = ({ children }: { children: JSX.Element }) => {
 const App = () => (
   <AuthProvider>
     <BrowserRouter>
+      <Toaster position="top-right" theme="dark" richColors />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
@@ -43,12 +45,9 @@ const App = () => (
 );
 
 const MainLayout = () => (
-  <div>
-    <NavBar />
-    <div style={{ padding: '1rem' }}>
-      <Outlet />
-    </div>
-  </div>
+  <Layout>
+    <Outlet />
+  </Layout>
 );
 
 export default App;

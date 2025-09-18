@@ -19,13 +19,12 @@ export const Account = () => {
   };
 
   return (
-    <div>
-      <h2>Account</h2>
-      <form onSubmit={onSubmit} style={{ display: 'flex', gap: 8, margin: '12px 0' }}>
-        <input value={name} onChange={(e) => setName(e.target.value)} />
-        <button disabled={saving} type="submit">Save</button>
+    <div className="space-y-4">
+      <h1 className="page-title">Account</h1>
+      <form onSubmit={onSubmit} className="card p-4 flex items-center gap-3 max-w-lg">
+        <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+        <button className="btn btn-primary" disabled={saving} type="submit">Save</button>
       </form>
     </div>
   );
 };
-

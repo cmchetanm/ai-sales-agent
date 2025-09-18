@@ -34,24 +34,38 @@ export const Leads = () => {
   const pipelineOptions = useMemo(() => [{ id: '', name: 'All Pipelines' }, ...pipelines], [pipelines]);
 
   return (
-    <div>
-      <h2>Leads</h2>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '8px 0' }}>
-        <label>Pipeline:</label>
-        <select value={pipelineId as any} onChange={(e) => setPipelineId((e.target.value as any) || '')}>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="page-title">Leads</h1>
+      </div>
+      <div className="card p-4 flex items-center gap-3">
+        <label className="label">Pipeline</label>
+        <select className="input max-w-xs" value={pipelineId as any} onChange={(e) => setPipelineId((e.target.value as any) || '')}>
           {pipelineOptions.map((p) => <option key={p.id ?? 'all'} value={p.id}>{p.name}</option>)}
         </select>
       </div>
-      <form onSubmit={create} style={{ display: 'flex', gap: 8, margin: '12px 0' }}>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="lead@example.com" />
-        <button disabled={loading || !pipelineId} type="submit">Create Lead</button>
+      <form onSubmit={create} className="card p-4 flex items-center gap-3">
+        <input className="input max-w-sm" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="lead@example.com" />
+        <button className="btn btn-primary" disabled={loading || !pipelineId} type="submit">Create Lead</button>
       </form>
-      <ul>
-        {items.map((l) => (
-          <li key={l.id}>{l.email} <span style={{ opacity: 0.6 }}>({l.status})</span></li>
-        ))}
-      </ul>
+      <div className="card overflow-hidden">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((l) => (
+              <tr key={l.id} className="border-t border-slate-800/60">
+                <td className="font-medium">{l.email}</td>
+                <td className="text-slate-400">{l.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
-

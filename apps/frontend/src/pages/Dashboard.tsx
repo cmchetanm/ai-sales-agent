@@ -16,16 +16,25 @@ export const Dashboard = () => {
   }, []);
 
   return (
-    <div>
-      <h2>Dashboard</h2>
-      <div style={{ marginTop: 8, fontSize: 14, opacity: 0.8 }}>Backend health: {health}</div>
-      {token && (
-        <div style={{ marginTop: 16 }}>
-          <div>User: {user?.email}</div>
-          <div>Account: {account?.name}</div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="page-title">Dashboard</h1>
+        <p className="text-slate-400">High-level view of your sales workspace.</p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="card p-4">
+          <div className="text-sm text-slate-400">Backend</div>
+          <div className="text-2xl font-semibold capitalize">{health}</div>
         </div>
-      )}
+        <div className="card p-4">
+          <div className="text-sm text-slate-400">User</div>
+          <div className="text-2xl font-semibold">{user?.email}</div>
+        </div>
+        <div className="card p-4">
+          <div className="text-sm text-slate-400">Account</div>
+          <div className="text-2xl font-semibold">{account?.name}</div>
+        </div>
+      </div>
     </div>
   );
 };
-
