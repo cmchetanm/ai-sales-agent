@@ -4,7 +4,7 @@ module Api
   module V1
     class LeadsController < Api::BaseController
       def index
-        scope = current_account.leads.order(created_at: :desc)
+        scope = policy_scope(current_account.leads).order(created_at: :desc)
         scope = scope.where(pipeline_id: params[:pipeline_id]) if params[:pipeline_id].present?
         scope = scope.where(status: params[:status]) if params[:status].present?
 
@@ -28,7 +28,7 @@ module Api
         if lead.save
           render json: { lead: LeadSerializer.new(lead).serializable_hash }, status: :created
         else
-          render json: { errors: lead.errors.full_messages }, status: :unprocessable_entity
+          render json: { errors: lead.errors.full_messages }, status: :unprocessable_content
         end
       end
 
@@ -42,7 +42,7 @@ module Api
         if lead.update(lead_params.except(:pipeline_id))
           render json: { lead: LeadSerializer.new(lead).serializable_hash }
         else
-          render json: { errors: lead.errors.full_messages }, status: :unprocessable_entity
+          render json: { errors: lead.errors.full_messages }, status: :unprocessable_content
         end
       end
 
@@ -54,12 +54,6 @@ module Api
       end
 
       private
-
-      def default_limit
-        limit = params[:limit].to_i
-        return 50 if limit <= 0
-        [limit, 200].min
-      end
 
       def per_page
         (params[:per_page].presence || Pagy::DEFAULT[:items]).to_i

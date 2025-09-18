@@ -13,7 +13,7 @@ module Api
         if current_account.update(account_params)
           render json: { account: AccountSerializer.new(current_account).serializable_hash }
         else
-          render json: { errors: current_account.errors.full_messages }, status: :unprocessable_entity
+          render json: { errors: current_account.errors.full_messages }, status: :unprocessable_content
         end
       end
 

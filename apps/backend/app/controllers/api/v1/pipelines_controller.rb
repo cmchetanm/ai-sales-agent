@@ -4,7 +4,7 @@ module Api
   module V1
     class PipelinesController < Api::BaseController
       def index
-        scope = current_account.pipelines.order(:created_at)
+        scope = policy_scope(current_account.pipelines).order(:created_at)
         @pagy, records = pagy(scope, items: per_page)
         render json: {
           pipelines: records.map { |p| PipelineSerializer.new(p).serializable_hash },
@@ -24,7 +24,7 @@ module Api
         if pipeline.save
           render json: { pipeline: PipelineSerializer.new(pipeline).serializable_hash }, status: :created
         else
-          render json: { errors: pipeline.errors.full_messages }, status: :unprocessable_entity
+          render json: { errors: pipeline.errors.full_messages }, status: :unprocessable_content
         end
       end
 
@@ -34,7 +34,7 @@ module Api
         if pipeline.update(pipeline_params)
           render json: { pipeline: PipelineSerializer.new(pipeline).serializable_hash }
         else
-          render json: { errors: pipeline.errors.full_messages }, status: :unprocessable_entity
+          render json: { errors: pipeline.errors.full_messages }, status: :unprocessable_content
         end
       end
 
