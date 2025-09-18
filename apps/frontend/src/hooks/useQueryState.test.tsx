@@ -28,10 +28,9 @@ describe('useQueryState', () => {
     expect(screen.getByTestId('page').textContent).toBe('2');
     fireEvent.click(screen.getByText('setq'));
     fireEvent.click(screen.getByText('setp'));
-    // allow router state to flush
+    // allow state to flush and verify component reads updated values
     await new Promise((r) => setTimeout(r, 0));
-    const loc = (ui as any).container.ownerDocument.defaultView!.location as Location;
-    expect(loc.search.includes('q=hello')).toBe(true);
-    expect(loc.search.includes('page=3')).toBe(true);
+    expect(screen.getByTestId('q').textContent).toBe('hello');
+    expect(screen.getByTestId('page').textContent).toBe('3');
   });
 });
