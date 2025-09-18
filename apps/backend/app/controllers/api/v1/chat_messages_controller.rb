@@ -3,6 +3,7 @@
 module Api
   module V1
     class ChatMessagesController < Api::BaseController
+      require_dependency 'ai/llm_client'
       def index
         session = current_account.chat_sessions.find(params[:chat_session_id])
         messages = session.chat_messages.order(:created_at)
@@ -13,7 +14,7 @@ module Api
         session = current_account.chat_sessions.find(params[:chat_session_id])
         user_msg = session.chat_messages.create!(sender_type: 'User', content: message_params[:content], sent_at: Time.current)
 
-        llm = Ai::LlmClient.new
+        llm = ::Ai::LlmClient.new
         context = session.chat_messages.order(:created_at).limit(20).map do |m|
           { role: m.sender_type == 'User' ? 'user' : 'assistant', content: m.content.to_s }
         end
@@ -38,4 +39,3 @@ module Api
     end
   end
 end
-

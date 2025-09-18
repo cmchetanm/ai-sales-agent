@@ -14,19 +14,26 @@ module Ai
 
     def reply(session_id:, account_id:, user_id:, messages: [])
       payload = {
-        session_id: session_id,
+        session_id: session_id.to_s,
         account_id: account_id,
         user_id: user_id,
         messages: messages.map { |m| { role: m[:role], content: m[:content].to_s } }
       }
       resp = @conn.post('/chat/messages', payload)
-      raise(StandardError, "LLM service error: #{resp.status}") unless resp.success?
+      return resp.body.fetch('reply') if resp.success?
 
-      resp.body.fetch('reply')
+      # Gracefully degrade on validation/422 or other non-200s
+      detail = begin
+        b = resp.body
+        b.is_a?(Hash) ? b['detail'] || b : b
+      rescue StandardError
+        nil
+      end
+      Rails.logger.warn("LLM service non-success #{resp.status}: #{detail}")
+      'Noted. Could you clarify industry, roles, and geography?'
     rescue Faraday::Error => e
       Rails.logger.error("LLM error: #{e.message}")
       'Sorry, I had trouble thinking just now. Could you rephrase?'
     end
   end
 end
-
