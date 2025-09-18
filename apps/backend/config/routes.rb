@@ -44,6 +44,9 @@ Rails.application.routes.draw do
       resources :pipelines
       resources :leads
       resources :campaigns
+      resources :chat_sessions, only: %i[create show] do
+        resources :messages, only: %i[index create], controller: 'chat_messages'
+      end
       resource :account, only: %i[show update]
 
       namespace :auth do
