@@ -1,0 +1,160 @@
+openapi: 3.0.3
+info:
+  title: AI Sales Agent API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/v1/health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+  /api/v1/auth/sign_in:
+    post:
+      summary: Sign in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                    password:
+                      type: string
+      responses:
+        '200': { description: OK }
+        '401': { description: Unauthorized }
+  /api/v1/auth/sign_up:
+    post:
+      summary: Sign up
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                account:
+                  type: object
+                  properties:
+                    name: { type: string }
+                    plan_slug: { type: string }
+                user:
+                  type: object
+                  properties:
+                    email: { type: string }
+                    password: { type: string }
+                    password_confirmation: { type: string }
+      responses:
+        '201': { description: Created }
+  /api/v1/pipelines:
+    get:
+      summary: List pipelines
+      responses: { '200': { description: OK } }
+    post:
+      summary: Create pipeline
+      responses: { '201': { description: Created }, '422': { description: Unprocessable Content } }
+  /api/v1/pipelines/{id}:
+    get:
+      summary: Show pipeline
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses: { '200': { description: OK }, '404': { description: Not Found } }
+    patch:
+      summary: Update pipeline
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses: { '200': { description: OK }, '422': { description: Unprocessable Content } }
+    delete:
+      summary: Delete pipeline
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses: { '204': { description: No Content } }
+  /api/v1/leads:
+    get:
+      summary: List leads
+      responses: { '200': { description: OK } }
+    post:
+      summary: Create lead
+      responses: { '201': { description: Created }, '422': { description: Unprocessable Content } }
+  /api/v1/leads/{id}:
+    get:
+      summary: Show lead
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses: { '200': { description: OK }, '404': { description: Not Found } }
+    patch:
+      summary: Update lead
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses: { '200': { description: OK }, '422': { description: Unprocessable Content } }
+    delete:
+      summary: Delete lead
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses: { '204': { description: No Content } }
+  /api/v1/campaigns:
+    get:
+      summary: List campaigns
+      responses: { '200': { description: OK } }
+    post:
+      summary: Create campaign
+      responses: { '201': { description: Created }, '422': { description: Unprocessable Content } }
+  /api/v1/campaigns/{id}:
+    get:
+      summary: Show campaign
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses: { '200': { description: OK }, '404': { description: Not Found } }
+    patch:
+      summary: Update campaign
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses: { '200': { description: OK }, '422': { description: Unprocessable Content } }
+    delete:
+      summary: Delete campaign
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses: { '204': { description: No Content } }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: []

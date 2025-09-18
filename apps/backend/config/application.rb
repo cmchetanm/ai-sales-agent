@@ -22,6 +22,9 @@ module Backend
     config.active_job.queue_adapter = :sidekiq
     config.active_record.dump_schema_after_migration = false
 
+    # Security: Rate limiting and safelisting (enabled when rack-attack is present)
+    config.middleware.use Rack::Attack if defined?(Rack::Attack)
+
     config.generators do |g|
       g.test_framework :rspec
       g.fixture_replacement :factory_bot, dir: "spec/factories"

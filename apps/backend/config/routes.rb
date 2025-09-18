@@ -31,6 +31,10 @@ Rails.application.routes.draw do
       namespace :auth do
         resource :profile, only: [:show]
       end
+
+      # API docs
+      get '/openapi.yaml', to: 'docs#openapi'
+      get '/api-docs', to: 'docs#ui'
     end
   end
 
