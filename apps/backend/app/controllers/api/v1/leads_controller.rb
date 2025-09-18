@@ -8,18 +8,23 @@ module Api
         scope = scope.where(pipeline_id: params[:pipeline_id]) if params[:pipeline_id].present?
         scope = scope.where(status: params[:status]) if params[:status].present?
 
-        leads = scope.limit(default_limit)
-        render json: { leads: leads.map { |l| LeadSerializer.new(l).serializable_hash } }
+        @pagy, records = pagy(scope, items: per_page)
+        render json: {
+          leads: records.map { |l| LeadSerializer.new(l).serializable_hash },
+          pagination: pagy_meta(@pagy)
+        }
       end
 
       def show
         lead = current_account.leads.find(params[:id])
+        authorize lead
         render json: { lead: LeadSerializer.new(lead).serializable_hash }
       end
 
       def create
         pipeline = current_account.pipelines.find(lead_params[:pipeline_id])
         lead = current_account.leads.new(lead_params.merge(pipeline:))
+        authorize lead
         if lead.save
           render json: { lead: LeadSerializer.new(lead).serializable_hash }, status: :created
         else
@@ -29,6 +34,7 @@ module Api
 
       def update
         lead = current_account.leads.find(params[:id])
+        authorize lead
         if updating_pipeline?
           pipeline = current_account.pipelines.find(lead_params[:pipeline_id])
           lead.pipeline = pipeline
@@ -42,6 +48,7 @@ module Api
 
       def destroy
         lead = current_account.leads.find(params[:id])
+        authorize lead
         lead.destroy
         head :no_content
       end
@@ -52,6 +59,14 @@ module Api
         limit = params[:limit].to_i
         return 50 if limit <= 0
         [limit, 200].min
+      end
+
+      def per_page
+        (params[:per_page].presence || Pagy::DEFAULT[:items]).to_i
+      end
+
+      def pagy_meta(p)
+        { page: p.page, items: p.items, count: p.count, pages: p.pages }
       end
 
       def updating_pipeline?

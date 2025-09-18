@@ -31,5 +31,11 @@ RSpec.describe 'API V1 Pipelines', type: :request do
       delete "/api/v1/pipelines/#{pid}", headers: auth_headers(user)
       expect(response).to have_http_status(:no_content)
     end
+
+    it 'forbids create for viewer' do
+      viewer = create(:user, account:, role: 'viewer')
+      post '/api/v1/pipelines', headers: auth_headers(viewer), params: { pipeline: { name: 'X' } }.to_json
+      expect(response).to have_http_status(:forbidden)
+    end
   end
 end

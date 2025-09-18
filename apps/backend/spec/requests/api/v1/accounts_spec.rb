@@ -18,4 +18,10 @@ RSpec.describe 'API V1 Account', type: :request do
     expect(response).to have_http_status(:ok)
     expect(json_body['account']['name']).to eq('New Name')
   end
+
+  it 'forbids update for viewer' do
+    viewer = create(:user, account:, role: 'viewer')
+    patch '/api/v1/account', headers: auth_headers(viewer), params: { account: { name: 'Nope' } }.to_json
+    expect(response).to have_http_status(:forbidden)
+  end
 end

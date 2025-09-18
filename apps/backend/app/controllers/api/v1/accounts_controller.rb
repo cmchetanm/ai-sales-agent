@@ -4,10 +4,12 @@ module Api
   module V1
     class AccountsController < Api::BaseController
       def show
+        authorize current_account, :show?
         render json: { account: AccountSerializer.new(current_account).serializable_hash }
       end
 
       def update
+        authorize current_account, :update?
         if current_account.update(account_params)
           render json: { account: AccountSerializer.new(current_account).serializable_hash }
         else

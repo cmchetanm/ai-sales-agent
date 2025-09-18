@@ -8,12 +8,16 @@ module Api
         scope = scope.where(pipeline_id: params[:pipeline_id]) if params[:pipeline_id].present?
         scope = scope.where(status: params[:status]) if params[:status].present?
 
-        campaigns = scope.limit(default_limit)
-        render json: { campaigns: campaigns.map { |c| CampaignSerializer.new(c).serializable_hash } }
+        @pagy, records = pagy(scope, items: per_page)
+        render json: {
+          campaigns: records.map { |c| CampaignSerializer.new(c).serializable_hash },
+          pagination: pagy_meta(@pagy)
+        }
       end
 
       def show
         campaign = current_account.campaigns.find(params[:id])
+        authorize campaign
         render json: { campaign: CampaignSerializer.new(campaign).serializable_hash }
       end
 
@@ -23,6 +27,7 @@ module Api
           campaign.pipeline = current_account.pipelines.find(campaign.pipeline_id)
         end
 
+        authorize campaign
         if campaign.save
           render json: { campaign: CampaignSerializer.new(campaign).serializable_hash }, status: :created
         else
@@ -32,6 +37,7 @@ module Api
 
       def update
         campaign = current_account.campaigns.find(params[:id])
+        authorize campaign
         if campaign_params.key?(:pipeline_id)
           campaign.pipeline = current_account.pipelines.find(campaign_params[:pipeline_id]) if campaign_params[:pipeline_id].present?
         end
@@ -45,6 +51,7 @@ module Api
 
       def destroy
         campaign = current_account.campaigns.find(params[:id])
+        authorize campaign
         campaign.destroy
         head :no_content
       end
@@ -55,6 +62,14 @@ module Api
         limit = params[:limit].to_i
         return 50 if limit <= 0
         [limit, 200].min
+      end
+
+      def per_page
+        (params[:per_page].presence || Pagy::DEFAULT[:items]).to_i
+      end
+
+      def pagy_meta(p)
+        { page: p.page, items: p.items, count: p.count, pages: p.pages }
       end
 
       def campaign_params

@@ -32,5 +32,11 @@ RSpec.describe 'API V1 Leads', type: :request do
       delete "/api/v1/leads/#{lid}", headers: auth_headers(user)
       expect(response).to have_http_status(:no_content)
     end
+
+    it 'forbids create for viewer' do
+      viewer = create(:user, account:, role: 'viewer')
+      post '/api/v1/leads', headers: auth_headers(viewer), params: { lead: { pipeline_id: pipeline.id, email: 'v@example.com' } }.to_json
+      expect(response).to have_http_status(:forbidden)
+    end
   end
 end
