@@ -6,6 +6,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { toast } from 'sonner';
+import { PaginationControls } from '../components/PaginationControls';
 
 export const Campaigns = () => {
   const { token } = useAuth();
@@ -16,18 +17,25 @@ export const Campaigns = () => {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<{ id: number; name: string; status: string } | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(0);
 
-  const load = async () => {
+  const load = async (targetPage = page) => {
     if (!token) return;
     const [cRes, pRes] = await Promise.all([
-      api.campaignsIndex(token, { per_page: 20 }),
+      api.campaignsIndex(token, { per_page: 10, page: targetPage }),
       api.pipelinesIndex(token, { per_page: 50 })
     ]);
-    if (cRes.ok && cRes.data) setItems(cRes.data.campaigns);
+    if (cRes.ok && cRes.data) {
+      setItems(cRes.data.campaigns);
+      const p = (cRes.data as any).pagination; if (p) { setPages(p.pages); setPage(p.page); }
+    } else {
+      toast.error('Failed to load');
+    }
     if (pRes.ok && pRes.data) setPipelines(pRes.data.pipelines);
   };
 
-  useEffect(() => { load(); }, [token]);
+  useEffect(() => { load(1); }, [token]);
 
   const create = async (e: FormEvent) => {
     e.preventDefault();
@@ -98,6 +106,7 @@ export const Campaigns = () => {
           </TableBody>
         </Table>
       </TableContainer>
+      <PaginationControls page={page} pages={pages} onPageChange={(p) => load(p)} disabled={loading} />
       <Dialog open={!!editing} onClose={() => setEditing(null)}>
         <DialogTitle>Edit Campaign</DialogTitle>
         <DialogContent sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>

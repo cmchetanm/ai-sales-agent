@@ -6,6 +6,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { toast } from 'sonner';
+import { PaginationControls } from '../components/PaginationControls';
 
 export const Pipelines = () => {
   const { token } = useAuth();
@@ -14,14 +15,22 @@ export const Pipelines = () => {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<{ id: number; name: string } | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(0);
 
-  const load = async () => {
+  const load = async (targetPage = page) => {
     if (!token) return;
-    const res = await api.pipelinesIndex(token, { per_page: 20 });
-    if (res.ok && res.data) setItems(res.data.pipelines);
+    const res = await api.pipelinesIndex(token, { per_page: 10, page: targetPage });
+    if (res.ok && res.data) {
+      setItems(res.data.pipelines);
+      const p = (res.data as any).pagination;
+      if (p) { setPages(p.pages); setPage(p.page); }
+    } else {
+      toast.error('Failed to load');
+    }
   };
 
-  useEffect(() => { load(); }, [token]);
+  useEffect(() => { load(1); }, [token]);
 
   const create = async (e: FormEvent) => {
     e.preventDefault();
@@ -88,6 +97,7 @@ export const Pipelines = () => {
           </TableBody>
         </Table>
       </TableContainer>
+      <PaginationControls page={page} pages={pages} onPageChange={(p) => load(p)} disabled={loading} />
 
       <Dialog open={!!editing} onClose={() => setEditing(null)}>
         <DialogTitle>Edit Pipeline</DialogTitle>

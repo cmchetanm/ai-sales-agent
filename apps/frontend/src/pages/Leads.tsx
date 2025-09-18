@@ -6,6 +6,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { toast } from 'sonner';
+import { PaginationControls } from '../components/PaginationControls';
 
 export const Leads = () => {
   const { token } = useAuth();
@@ -16,18 +17,25 @@ export const Leads = () => {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<{ id: number; email: string } | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(0);
 
-  const load = async () => {
+  const load = async (targetPage = page) => {
     if (!token) return;
     const [leadsRes, pipesRes] = await Promise.all([
-      api.leadsIndex(token, { per_page: 20, pipeline_id: pipelineId || undefined }),
+      api.leadsIndex(token, { per_page: 10, page: targetPage, pipeline_id: pipelineId || undefined }),
       api.pipelinesIndex(token, { per_page: 50 })
     ]);
-    if (leadsRes.ok && leadsRes.data) setItems(leadsRes.data.leads);
+    if (leadsRes.ok && leadsRes.data) {
+      setItems(leadsRes.data.leads);
+      const p = (leadsRes.data as any).pagination; if (p) { setPages(p.pages); setPage(p.page); }
+    } else {
+      toast.error('Failed to load');
+    }
     if (pipesRes.ok && pipesRes.data) setPipelines(pipesRes.data.pipelines);
   };
 
-  useEffect(() => { load(); }, [token, pipelineId]);
+  useEffect(() => { load(1); }, [token, pipelineId]);
 
   const create = async (e: FormEvent) => {
     e.preventDefault();
@@ -103,6 +111,7 @@ export const Leads = () => {
           </TableBody>
         </Table>
       </TableContainer>
+      <PaginationControls page={page} pages={pages} onPageChange={(p) => load(p)} disabled={loading} />
       <Dialog open={!!editing} onClose={() => setEditing(null)}>
         <DialogTitle>Edit Lead</DialogTitle>
         <DialogContent>
