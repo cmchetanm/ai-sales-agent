@@ -13,7 +13,7 @@ RSpec.describe 'API V1 Leads', type: :request do
       # create
       post '/api/v1/leads',
            headers: auth_headers(user),
-           params: { lead: { pipeline_id: pipeline.id, first_name: 'Lee', last_name: 'D', email: 'lee@example.com', status: 'new' } }
+           params: { lead: { pipeline_id: pipeline.id, first_name: 'Lee', last_name: 'D', email: 'lee@example.com', status: 'new' } }.to_json
 
       expect(response).to have_http_status(:created)
       lid = json_body['lead']['id']
@@ -24,7 +24,7 @@ RSpec.describe 'API V1 Leads', type: :request do
       expect(json_body['lead']['email']).to eq('lee@example.com')
 
       # update
-      patch "/api/v1/leads/#{lid}", headers: auth_headers(user), params: { lead: { status: 'enriched' } }
+      patch "/api/v1/leads/#{lid}", headers: auth_headers(user), params: { lead: { status: 'enriched' } }.to_json
       expect(response).to have_http_status(:ok)
       expect(json_body['lead']['status']).to eq('enriched')
 
@@ -34,4 +34,3 @@ RSpec.describe 'API V1 Leads', type: :request do
     end
   end
 end
-

@@ -12,7 +12,7 @@ RSpec.describe 'API V1 Pipelines', type: :request do
       # create
       post '/api/v1/pipelines',
            headers: auth_headers(user),
-           params: { pipeline: { name: 'New Pipeline', description: 'D', status: 'active', primary: false, stage_definitions: [{ name: 'New' }] } }
+           params: { pipeline: { name: 'New Pipeline', description: 'D', status: 'active', primary: false, stage_definitions: [{ name: 'New' }] } }.to_json
 
       expect(response).to have_http_status(:created)
       pid = json_body['pipeline']['id']
@@ -23,7 +23,7 @@ RSpec.describe 'API V1 Pipelines', type: :request do
       expect(json_body['pipeline']['name']).to eq('New Pipeline')
 
       # update
-      patch "/api/v1/pipelines/#{pid}", headers: auth_headers(user), params: { pipeline: { name: 'Updated' } }
+      patch "/api/v1/pipelines/#{pid}", headers: auth_headers(user), params: { pipeline: { name: 'Updated' } }.to_json
       expect(response).to have_http_status(:ok)
       expect(json_body['pipeline']['name']).to eq('Updated')
 
@@ -33,4 +33,3 @@ RSpec.describe 'API V1 Pipelines', type: :request do
     end
   end
 end
-

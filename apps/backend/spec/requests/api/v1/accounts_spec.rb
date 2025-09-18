@@ -14,9 +14,8 @@ RSpec.describe 'API V1 Account', type: :request do
   end
 
   it 'updates account name' do
-    patch '/api/v1/account', headers: auth_headers(user), params: { account: { name: 'New Name' } }
+    patch '/api/v1/account', headers: auth_headers(user), params: { account: { name: 'New Name' } }.to_json
     expect(response).to have_http_status(:ok)
     expect(json_body['account']['name']).to eq('New Name')
   end
 end
-
