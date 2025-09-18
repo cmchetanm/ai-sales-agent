@@ -44,10 +44,6 @@ const App = () => (
   </AuthProvider>
 );
 
-const MainLayout = () => (
-  <Layout>
-    <Outlet />
-  </Layout>
-);
+const MainLayout = () => <Layout />;
 
 export default App;
