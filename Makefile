@@ -78,7 +78,7 @@ seed:
 
 backend-test:
 	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
-	@$(DOCKER_COMPOSE) run --rm $(BACKEND_SERVICE) bundle exec rspec
+	@$(DOCKER_COMPOSE) run --rm -e RAILS_ENV=test $(BACKEND_SERVICE) bash -lc "bundle exec rails db:prepare && bundle exec rspec"
 
 emailing-test:
 	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
