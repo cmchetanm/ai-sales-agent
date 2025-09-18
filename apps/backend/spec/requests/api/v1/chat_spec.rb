@@ -19,9 +19,8 @@ RSpec.describe 'API V1 Chat', type: :request do
     expect(response).to have_http_status(:created)
     id = json_body['chat_session']['id']
 
-    post "/api/v1/chat_sessions/#{id}/messages", headers: auth_headers(user), params: { message: { content: 'Hi' } }
+    post "/api/v1/chat_sessions/#{id}/messages", headers: auth_headers(user), params: { message: { content: 'Hi' } }.to_json
     expect(response).to have_http_status(:created)
     expect(json_body['assistant']['content']).to eq('Hello from LLM')
   end
 end
-
