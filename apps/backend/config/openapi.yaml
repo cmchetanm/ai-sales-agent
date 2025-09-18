@@ -57,10 +57,34 @@ paths:
   /api/v1/pipelines:
     get:
       summary: List pipelines
-      responses: { '200': { description: OK } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pipelines:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Pipeline'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
     post:
       summary: Create pipeline
-      responses: { '201': { description: Created }, '422': { description: Unprocessable Content } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pipeline:
+                  $ref: '#/components/schemas/PipelineCreate'
+      responses:
+        '201': { description: Created }
+        '422': { description: Unprocessable Content }
   /api/v1/pipelines/{id}:
     get:
       summary: Show pipeline
@@ -69,7 +93,17 @@ paths:
           name: id
           required: true
           schema: { type: string }
-      responses: { '200': { description: OK }, '404': { description: Not Found } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pipeline:
+                    $ref: '#/components/schemas/Pipeline'
+        '404': { description: Not Found }
     patch:
       summary: Update pipeline
       parameters:
@@ -77,7 +111,18 @@ paths:
           name: id
           required: true
           schema: { type: string }
-      responses: { '200': { description: OK }, '422': { description: Unprocessable Content } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pipeline:
+                  $ref: '#/components/schemas/PipelineUpdate'
+      responses:
+        '200': { description: OK }
+        '422': { description: Unprocessable Content }
     delete:
       summary: Delete pipeline
       parameters:
@@ -89,10 +134,34 @@ paths:
   /api/v1/leads:
     get:
       summary: List leads
-      responses: { '200': { description: OK } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  leads:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Lead'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
     post:
       summary: Create lead
-      responses: { '201': { description: Created }, '422': { description: Unprocessable Content } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lead:
+                  $ref: '#/components/schemas/LeadCreate'
+      responses:
+        '201': { description: Created }
+        '422': { description: Unprocessable Content }
   /api/v1/leads/{id}:
     get:
       summary: Show lead
@@ -101,7 +170,17 @@ paths:
           name: id
           required: true
           schema: { type: string }
-      responses: { '200': { description: OK }, '404': { description: Not Found } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lead:
+                    $ref: '#/components/schemas/Lead'
+        '404': { description: Not Found }
     patch:
       summary: Update lead
       parameters:
@@ -109,7 +188,18 @@ paths:
           name: id
           required: true
           schema: { type: string }
-      responses: { '200': { description: OK }, '422': { description: Unprocessable Content } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lead:
+                  $ref: '#/components/schemas/LeadUpdate'
+      responses:
+        '200': { description: OK }
+        '422': { description: Unprocessable Content }
     delete:
       summary: Delete lead
       parameters:
@@ -121,10 +211,34 @@ paths:
   /api/v1/campaigns:
     get:
       summary: List campaigns
-      responses: { '200': { description: OK } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  campaigns:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Campaign'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
     post:
       summary: Create campaign
-      responses: { '201': { description: Created }, '422': { description: Unprocessable Content } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                campaign:
+                  $ref: '#/components/schemas/CampaignCreate'
+      responses:
+        '201': { description: Created }
+        '422': { description: Unprocessable Content }
   /api/v1/campaigns/{id}:
     get:
       summary: Show campaign
@@ -133,7 +247,17 @@ paths:
           name: id
           required: true
           schema: { type: string }
-      responses: { '200': { description: OK }, '404': { description: Not Found } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  campaign:
+                    $ref: '#/components/schemas/Campaign'
+        '404': { description: Not Found }
     patch:
       summary: Update campaign
       parameters:
@@ -141,7 +265,18 @@ paths:
           name: id
           required: true
           schema: { type: string }
-      responses: { '200': { description: OK }, '422': { description: Unprocessable Content } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                campaign:
+                  $ref: '#/components/schemas/CampaignUpdate'
+      responses:
+        '200': { description: OK }
+        '422': { description: Unprocessable Content }
     delete:
       summary: Delete campaign
       parameters:
@@ -156,5 +291,131 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    Pagination:
+      type: object
+      properties:
+        page: { type: integer }
+        items: { type: integer }
+        count: { type: integer }
+        pages: { type: integer }
+    Plan:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string }
+        monthly_price_cents: { type: integer }
+        limits: { type: object, additionalProperties: true }
+        features: { type: object, additionalProperties: true }
+        active: { type: boolean }
+    AccountProfile:
+      type: object
+      properties:
+        summary: { type: string }
+        target_industries: { type: array, items: { type: string } }
+        target_roles: { type: array, items: { type: string } }
+        target_locations: { type: array, items: { type: string } }
+        ideal_customer_profile: { type: object }
+        questionnaire: { type: object }
+    Account:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        active: { type: boolean }
+        plan:
+          $ref: '#/components/schemas/Plan'
+        settings: { type: object }
+        profile:
+          $ref: '#/components/schemas/AccountProfile'
+    Pipeline:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string }
+        status: { type: string }
+        stage_definitions:
+          type: array
+          items: { type: object, properties: { name: { type: string } } }
+        primary: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    PipelineCreate:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        status: { type: string }
+        stage_definitions:
+          type: array
+          items: { type: object, properties: { name: { type: string } } }
+        primary: { type: boolean }
+      required: [name]
+    PipelineUpdate:
+      allOf:
+        - $ref: '#/components/schemas/PipelineCreate'
+    Lead:
+      type: object
+      properties:
+        id: { type: integer }
+        pipeline_id: { type: integer }
+        account_id: { type: integer }
+        source: { type: string }
+        external_id: { type: string }
+        status: { type: string }
+        first_name: { type: string }
+        last_name: { type: string }
+        email: { type: string }
+        company: { type: string }
+        job_title: { type: string }
+        location: { type: string }
+        phone: { type: string }
+        linkedin_url: { type: string }
+        website: { type: string }
+        score: { type: integer }
+        last_contacted_at: { type: string, format: date-time }
+        enrichment: { type: object }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    LeadCreate:
+      type: object
+      properties:
+        pipeline_id: { type: integer }
+        status: { type: string }
+        first_name: { type: string }
+        last_name: { type: string }
+        email: { type: string }
+      required: [pipeline_id]
+    LeadUpdate:
+      allOf:
+        - $ref: '#/components/schemas/LeadCreate'
+    Campaign:
+      type: object
+      properties:
+        id: { type: integer }
+        account_id: { type: integer }
+        pipeline_id: { type: integer }
+        name: { type: string }
+        channel: { type: string }
+        status: { type: string }
+        audience_filters: { type: object }
+        schedule: { type: object }
+        metrics: { type: object }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    CampaignCreate:
+      type: object
+      properties:
+        pipeline_id: { type: integer }
+        name: { type: string }
+        channel: { type: string }
+        status: { type: string }
+      required: [name, channel]
+    CampaignUpdate:
+      allOf:
+        - $ref: '#/components/schemas/CampaignCreate'
 security:
   - bearerAuth: []

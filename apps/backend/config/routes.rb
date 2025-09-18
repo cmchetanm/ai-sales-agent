@@ -1,4 +1,14 @@
 Rails.application.routes.draw do
+  require 'sidekiq/web'
+
+  # Sidekiq Web UI (admin-only via HTTP Basic)
+  Sidekiq::Web.use Rack::Session::Cookie, secret: Rails.application.secret_key_base
+  Sidekiq::Web.use Rack::Auth::Basic do |username, password|
+    secure_compare = ->(a, b) { ActiveSupport::SecurityUtils.secure_compare(::Digest::SHA256.hexdigest(a.to_s), ::Digest::SHA256.hexdigest(b.to_s)) }
+    secure_compare.call(username, ENV.fetch('SIDEKIQ_WEB_USERNAME', 'admin')) &
+      secure_compare.call(password, ENV.fetch('SIDEKIQ_WEB_PASSWORD', 'admin'))
+  end
+
   devise_for :users,
              defaults: { format: :json },
              path: 'api/v1/auth',
@@ -37,6 +47,8 @@ Rails.application.routes.draw do
       get '/api-docs', to: 'docs#ui'
     end
   end
+
+  mount Sidekiq::Web => '/sidekiq'
 
   root to: 'api/v1/health#show'
 end

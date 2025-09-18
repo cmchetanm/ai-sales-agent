@@ -23,8 +23,8 @@ if defined?(Rack::Attack)
     req.ip if req.post? && req.path == '/api/v1/auth/sign_up'
   end
 
-  # Return JSON for throttled requests
-  Rack::Attack.throttled_response = lambda do |_env|
+  # Return JSON for throttled requests (modern API)
+  Rack::Attack.throttled_responder = lambda do |_env|
     [
       429,
       { 'Content-Type' => 'application/json' },
@@ -32,4 +32,3 @@ if defined?(Rack::Attack)
     ]
   end
 end
-
