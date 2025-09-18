@@ -7,6 +7,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { toast } from 'sonner';
 import { PaginationControls } from '../components/PaginationControls';
+import { SearchBar } from '../components/SearchBar';
 
 export const Leads = () => {
   const { token } = useAuth();
@@ -22,6 +23,7 @@ export const Leads = () => {
   const [orderBy, setOrderBy] = useState<'email' | 'status'>('email');
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
   const [status, setStatus] = useState<string>('');
+  const [q, setQ] = useState('');
 
   const load = async (targetPage = page) => {
     if (!token) return;
@@ -79,7 +81,7 @@ export const Leads = () => {
     <>
       <Typography variant="h5" fontWeight={700} gutterBottom>Leads</Typography>
       <Card sx={{ mb: 2 }}>
-        <CardContent sx={{ display: 'flex', gap: 1 }}>
+        <CardContent sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <TextField select size="small" label="Pipeline" value={pipelineId as any} onChange={(e) => setPipelineId((e.target.value as any) || '')} sx={{ minWidth: 220 }}>
             {pipelineOptions.map((p) => <MenuItem key={p.id ?? 'all'} value={p.id}>{p.name}</MenuItem>)}
           </TextField>
@@ -87,6 +89,7 @@ export const Leads = () => {
             <MenuItem value="">All</MenuItem>
             {['new','researching','enriched','outreach','scheduled','responded','won','lost','archived'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
           </TextField>
+          <SearchBar value={q} onChange={setQ} placeholder="Search leads" />
         </CardContent>
       </Card>
       <Card sx={{ mb: 2 }}>
@@ -115,6 +118,7 @@ export const Leads = () => {
           <TableBody>
             {[...items]
               .filter((l) => !status || l.status === status)
+              .filter((l) => !q || (l.email?.toLowerCase().includes(q.toLowerCase()) || l.company?.toLowerCase().includes(q.toLowerCase())))
               .sort((a:any,b:any)=>{ const key = orderBy; const o = order === 'asc' ? 1 : -1; if(a[key]<b[key]) return -1*o; if(a[key]>b[key]) return 1*o; return 0; })
               .map((l) => (
               <TableRow key={l.id} hover>

@@ -7,6 +7,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { toast } from 'sonner';
 import { PaginationControls } from '../components/PaginationControls';
+import { SearchBar } from '../components/SearchBar';
 
 export const Campaigns = () => {
   const { token } = useAuth();
@@ -22,6 +23,7 @@ export const Campaigns = () => {
   const [orderBy, setOrderBy] = useState<'name' | 'status'>('name');
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
   const [status, setStatus] = useState<string>('');
+  const [q, setQ] = useState('');
 
   const load = async (targetPage = page) => {
     if (!token) return;
@@ -77,7 +79,7 @@ export const Campaigns = () => {
     <>
       <Typography variant="h5" fontWeight={700} gutterBottom>Campaigns</Typography>
       <Card sx={{ mb: 2 }}>
-        <CardContent sx={{ display: 'flex', gap: 1 }}>
+        <CardContent sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <TextField size="small" label="Campaign" value={name} onChange={(e) => setName(e.target.value)} />
           <TextField select size="small" label="Pipeline" value={pipelineId as any} onChange={(e) => setPipelineId((e.target.value as any) || '')} sx={{ minWidth: 220 }}>
             <MenuItem value="">(No pipeline)</MenuItem>
@@ -87,6 +89,7 @@ export const Campaigns = () => {
             <MenuItem value="">All</MenuItem>
             {['draft','scheduled','running','paused','completed','archived'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
           </TextField>
+          <SearchBar value={q} onChange={setQ} placeholder="Search campaigns" />
           <Button variant="contained" disabled={loading} onClick={create as any}>Create</Button>
         </CardContent>
       </Card>
@@ -110,6 +113,7 @@ export const Campaigns = () => {
           <TableBody>
             {[...items]
               .filter((c) => !status || c.status === status)
+              .filter((c) => !q || c.name?.toLowerCase().includes(q.toLowerCase()))
               .sort((a:any,b:any)=>{ const key = orderBy; const o = order === 'asc' ? 1 : -1; if(a[key]<b[key]) return -1*o; if(a[key]>b[key]) return 1*o; return 0; })
               .map((c) => (
               <TableRow key={c.id} hover>
