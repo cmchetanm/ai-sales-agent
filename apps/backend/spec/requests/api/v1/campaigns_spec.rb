@@ -51,5 +51,22 @@ RSpec.describe 'API V1 Campaigns', type: :request do
       expect(response).to have_http_status(:not_found)
     end
   end
-end
 
+  describe 'CRUD' do
+    it 'creates, updates, and deletes a campaign' do
+      post '/api/v1/campaigns',
+           headers: auth_headers(user),
+           params: { campaign: { name: 'Drip', channel: 'email', status: 'draft', pipeline_id: pipeline.id } }
+
+      expect(response).to have_http_status(:created)
+      cid = json_body['campaign']['id']
+
+      patch "/api/v1/campaigns/#{cid}", headers: auth_headers(user), params: { campaign: { status: 'scheduled' } }
+      expect(response).to have_http_status(:ok)
+      expect(json_body['campaign']['status']).to eq('scheduled')
+
+      delete "/api/v1/campaigns/#{cid}", headers: auth_headers(user)
+      expect(response).to have_http_status(:no_content)
+    end
+  end
+end

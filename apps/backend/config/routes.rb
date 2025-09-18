@@ -23,9 +23,9 @@ Rails.application.routes.draw do
     namespace :v1 do
       resource :health, only: [:show], controller: :health
       resources :plans, only: [:index]
-      resources :pipelines, only: %i[index show]
-      resources :leads, only: %i[index show]
-      resources :campaigns, only: %i[index show]
+      resources :pipelines
+      resources :leads
+      resources :campaigns
       resource :account, only: %i[show update]
 
       namespace :auth do
