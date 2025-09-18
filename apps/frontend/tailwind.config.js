@@ -1,6 +1,5 @@
-import type { Config } from 'tailwindcss'
-
-export default {
+/** @type {import('tailwindcss').Config} */
+module.exports = {
   content: [
     './index.html',
     './src/**/*.{ts,tsx}',
@@ -22,10 +21,10 @@ export default {
         },
       },
       boxShadow: {
-        'soft': '0 10px 30px -12px rgba(0, 0, 0, 0.45)'
-      }
+        soft: '0 10px 30px -12px rgba(0, 0, 0, 0.45)',
+      },
     },
   },
   plugins: [],
-} satisfies Config
+};
 
