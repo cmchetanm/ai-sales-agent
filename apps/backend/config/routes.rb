@@ -47,6 +47,10 @@ Rails.application.routes.draw do
       resources :chat_sessions, only: %i[create show] do
         resources :messages, only: %i[index create], controller: 'chat_messages'
       end
+
+      namespace :integrations do
+        resource :apollo, only: :create
+      end
       resource :account, only: %i[show update]
 
       namespace :auth do

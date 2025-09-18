@@ -94,6 +94,7 @@ export const Leads = () => {
           </TextField>
           <SearchBar value={q} onChange={setQ} placeholder="Search leads" />
           <Button variant="contained" onClick={() => setCreateOpen(true)}>New Lead</Button>
+          <Button variant="outlined" onClick={async () => { if (!token) return; await api.apolloFetch(token, { keywords: q || 'saas', role: 'cto', location: 'US' }); toast.success('Apollo import started'); }}>Fetch via Apollo</Button>
         </CardContent>
       </Card>
       <Card sx={{ mb: 2 }}>
