@@ -69,12 +69,12 @@ lint:
 
 db-prepare:
 	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
-	@$(DOCKER_COMPOSE) run --rm $(BACKEND_SERVICE) bundle exec rails db:prepare
-	@$(DOCKER_COMPOSE) run --rm $(EMAILING_SERVICE) bundle exec rails db:prepare
+	@$(DOCKER_COMPOSE) run --rm $(BACKEND_SERVICE) bash -lc "(bundle check || bundle install) && bundle exec rails db:prepare"
+	@$(DOCKER_COMPOSE) run --rm $(EMAILING_SERVICE) bash -lc "(bundle check || bundle install) && bundle exec rails db:prepare"
 
 seed:
 	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
-	@$(DOCKER_COMPOSE) run --rm $(BACKEND_SERVICE) bundle exec rails db:seed
+	@$(DOCKER_COMPOSE) run --rm $(BACKEND_SERVICE) bash -lc "(bundle check || bundle install) && bundle exec rails db:seed"
 
 backend-test:
 	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
