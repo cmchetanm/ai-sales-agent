@@ -12,6 +12,11 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/setupTests.ts',
-    css: true
+    css: true,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      thresholds: { lines: 80, statements: 80, functions: 70, branches: 60 }
+    }
   }
 });
