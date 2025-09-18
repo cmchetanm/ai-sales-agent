@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { PaginationControls } from '../components/PaginationControls';
 import { SearchBar } from '../components/SearchBar';
 import { useQueryState } from '../hooks/useQueryState';
+import { CreatePipelineDialog } from '../components/CreatePipelineDialog';
 
 export const Pipelines = () => {
   const { token } = useAuth();
@@ -17,6 +18,7 @@ export const Pipelines = () => {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<{ id: number; name: string } | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const [page, setPage] = useQueryState('page', 1 as any, 'number');
   const [pages, setPages] = useState(0);
   const [orderBy, setOrderBy] = useState<'name' | 'status'>('name');
@@ -75,8 +77,7 @@ export const Pipelines = () => {
       <Typography variant="h5" fontWeight={700} gutterBottom>Pipelines</Typography>
       <Card sx={{ mb: 2 }}>
         <CardContent sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <TextField size="small" label="Pipeline name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Button variant="contained" disabled={loading} onClick={create as any}>Create</Button>
+          <Button variant="contained" onClick={() => setCreateOpen(true)}>New Pipeline</Button>
           <SearchBar value={q} onChange={setQ} placeholder="Search pipelines" />
         </CardContent>
       </Card>
@@ -135,6 +136,11 @@ export const Pipelines = () => {
         message="This cannot be undone."
         onClose={() => setDeleting(null)}
         onConfirm={confirmDelete}
+      />
+      <CreatePipelineDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreate={async (n) => { setCreateOpen(false); setName(n); await create({ preventDefault: () => {} } as any); }}
       />
     </>
   );

@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { PaginationControls } from '../components/PaginationControls';
 import { SearchBar } from '../components/SearchBar';
 import { useQueryState } from '../hooks/useQueryState';
+import { CreateCampaignDialog } from '../components/CreateCampaignDialog';
 
 export const Campaigns = () => {
   const { token } = useAuth();
@@ -19,6 +20,7 @@ export const Campaigns = () => {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<{ id: number; name: string; status: string } | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const [page, setPage] = useQueryState('page', 1 as any, 'number');
   const [pages, setPages] = useState(0);
   const [orderBy, setOrderBy] = useState<'name' | 'status'>('name');
@@ -91,7 +93,7 @@ export const Campaigns = () => {
             {['draft','scheduled','running','paused','completed','archived'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
           </TextField>
           <SearchBar value={q} onChange={setQ} placeholder="Search campaigns" />
-          <Button variant="contained" disabled={loading} onClick={create as any}>Create</Button>
+          <Button variant="contained" onClick={() => setCreateOpen(true)}>New Campaign</Button>
         </CardContent>
       </Card>
       <TableContainer component={Card}>
@@ -150,6 +152,18 @@ export const Campaigns = () => {
         message="This cannot be undone."
         onClose={() => setDeleting(null)}
         onConfirm={confirmDelete}
+      />
+      <CreateCampaignDialog
+        open={createOpen}
+        pipelines={pipelines}
+        onClose={() => setCreateOpen(false)}
+        onCreate={async (attrs) => {
+          setCreateOpen(false);
+          setName(attrs.name);
+          setPipelineId((attrs.pipeline_id as any) || '');
+          setStatus(attrs.status);
+          await create({ preventDefault: () => {} } as any);
+        }}
       />
     </>
   );

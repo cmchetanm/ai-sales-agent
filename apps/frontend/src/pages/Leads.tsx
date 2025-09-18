@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { PaginationControls } from '../components/PaginationControls';
 import { SearchBar } from '../components/SearchBar';
 import { useQueryState } from '../hooks/useQueryState';
+import { CreateLeadDialog } from '../components/CreateLeadDialog';
 
 export const Leads = () => {
   const { token } = useAuth();
@@ -19,6 +20,7 @@ export const Leads = () => {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<{ id: number; email: string } | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const [page, setPage] = useQueryState('page', 1 as any, 'number');
   const [pages, setPages] = useState(0);
   const [orderBy, setOrderBy] = useState<'email' | 'status'>('email');
@@ -91,6 +93,7 @@ export const Leads = () => {
             {['new','researching','enriched','outreach','scheduled','responded','won','lost','archived'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
           </TextField>
           <SearchBar value={q} onChange={setQ} placeholder="Search leads" />
+          <Button variant="contained" onClick={() => setCreateOpen(true)}>New Lead</Button>
         </CardContent>
       </Card>
       <Card sx={{ mb: 2 }}>
@@ -152,6 +155,12 @@ export const Leads = () => {
         message="This cannot be undone."
         onClose={() => setDeleting(null)}
         onConfirm={confirmDelete}
+      />
+      <CreateLeadDialog
+        open={createOpen}
+        pipelines={pipelines}
+        onClose={() => setCreateOpen(false)}
+        onCreate={async (attrs) => { setCreateOpen(false); setPipelineId(attrs.pipeline_id); setEmail(attrs.email); await create({ preventDefault: () => {} } as any); }}
       />
     </>
   );
