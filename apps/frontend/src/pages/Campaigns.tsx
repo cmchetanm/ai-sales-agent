@@ -8,6 +8,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { toast } from 'sonner';
 import { PaginationControls } from '../components/PaginationControls';
 import { SearchBar } from '../components/SearchBar';
+import { useQueryState } from '../hooks/useQueryState';
 
 export const Campaigns = () => {
   const { token } = useAuth();
@@ -18,12 +19,12 @@ export const Campaigns = () => {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<{ id: number; name: string; status: string } | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useQueryState('page', 1 as any, 'number');
   const [pages, setPages] = useState(0);
   const [orderBy, setOrderBy] = useState<'name' | 'status'>('name');
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
-  const [status, setStatus] = useState<string>('');
-  const [q, setQ] = useState('');
+  const [status, setStatus] = useQueryState('status', '');
+  const [q, setQ] = useQueryState('q', '');
 
   const load = async (targetPage = page) => {
     if (!token) return;
@@ -40,7 +41,7 @@ export const Campaigns = () => {
     if (pRes.ok && pRes.data) setPipelines(pRes.data.pipelines);
   };
 
-  useEffect(() => { load(1); }, [token]);
+  useEffect(() => { load(page || 1); }, [token]);
 
   const create = async (e: FormEvent) => {
     e.preventDefault();

@@ -1,0 +1,36 @@
+import { describe, it, expect } from 'vitest';
+import { MemoryRouter, useSearchParams } from 'react-router-dom';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { useQueryState } from './useQueryState';
+
+function Demo() {
+  const [q, setQ] = useQueryState('q', '');
+  const [page, setPage] = useQueryState('page', 1 as any, 'number');
+  const [, setParams] = useSearchParams();
+  return (
+    <div>
+      <button onClick={() => setQ('hello')}>setq</button>
+      <button onClick={() => setPage((page as number) + 1)}>setp</button>
+      <span data-testid="q">{q}</span>
+      <span data-testid="page">{String(page)}</span>
+    </div>
+  );
+}
+
+describe('useQueryState', () => {
+  it('reads and writes to query string', () => {
+    const ui = render(
+      <MemoryRouter initialEntries={[{ pathname: '/', search: '?q=init&page=2' }]}>
+        <Demo />
+      </MemoryRouter>
+    );
+    expect(screen.getByTestId('q').textContent).toBe('init');
+    expect(screen.getByTestId('page').textContent).toBe('2');
+    fireEvent.click(screen.getByText('setq'));
+    fireEvent.click(screen.getByText('setp'));
+    const url = new URL((ui as any).container.ownerDocument.defaultView!.location.href);
+    expect(url.searchParams.get('q')).toBe('hello');
+    expect(url.searchParams.get('page')).toBe('3');
+  });
+});
+
