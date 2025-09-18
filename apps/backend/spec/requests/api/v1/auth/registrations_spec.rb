@@ -3,7 +3,15 @@
 require 'rails_helper'
 
 RSpec.describe 'API V1 Auth Registrations', type: :request do
-  let!(:plan) { create(:plan, slug: 'basic') }
+  let!(:plan) do
+    Plan.find_or_create_by!(slug: 'basic') do |p|
+      p.name = 'Basic'
+      p.monthly_price_cents = 0
+      p.limits = { 'leads_per_month' => 100 }
+      p.features = { 'enabled' => %w[basic_campaigns] }
+      p.active = true
+    end
+  end
   let(:headers) { { 'Content-Type' => 'application/json', 'Accept' => 'application/json' } }
 
   describe 'POST /api/v1/auth/sign_up' do
