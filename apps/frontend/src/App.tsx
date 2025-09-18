@@ -9,8 +9,7 @@ import { Leads } from './pages/Leads';
 import { Campaigns } from './pages/Campaigns';
 import { Account } from './pages/Account';
 import { Toaster } from 'sonner';
-import { ThemeProvider, CssBaseline } from '@mui/material';
-import { theme } from './theme';
+import { ThemeModeProvider } from './theme';
 
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
   const { token, loading } = useAuth();
@@ -22,8 +21,7 @@ const PrivateRoute = ({ children }: { children: JSX.Element }) => {
 const App = () => (
   <AuthProvider>
     <BrowserRouter>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
+      <ThemeModeProvider>
         <Toaster position="top-right" theme="dark" richColors />
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -44,7 +42,7 @@ const App = () => (
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </ThemeProvider>
+      </ThemeModeProvider>
     </BrowserRouter>
   </AuthProvider>
 );

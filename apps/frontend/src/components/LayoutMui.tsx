@@ -16,6 +16,7 @@ import {
   Typography,
   Button,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
@@ -23,7 +24,10 @@ import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { useAuth } from '../auth/AuthContext';
+import { ColorModeContext } from '../theme';
 
 const drawerWidth = 260;
 
@@ -31,6 +35,8 @@ export function LayoutMui() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { account, user, signOut } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const colorMode = React.useContext(ColorModeContext);
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
   const logout = async () => { await signOut(); navigate('/login'); };
@@ -69,9 +75,12 @@ export function LayoutMui() {
           <IconButton color="inherit" edge="start" onClick={handleDrawerToggle} sx={{ mr: 2, display: { sm: 'none' } }}>
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {account?.name || 'Workspace'}
           </Typography>
+          <IconButton color="inherit" onClick={colorMode.toggle} sx={{ mr: 1 }} title="Toggle theme">
+            {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+          </IconButton>
         </Toolbar>
       </AppBar>
       <Box component="nav" sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }} aria-label="sidebar">
@@ -114,4 +123,3 @@ function NavItem({ to, icon, label }: { to: string; icon: React.ReactNode; label
     </ListItem>
   );
 }
-
