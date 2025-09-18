@@ -26,7 +26,7 @@ module Api
               name: account.name,
               plan: account.plan.slug
             },
-            user: UserSerializer.new(resource).serializable_hash[:data][:attributes],
+            user: UserSerializer.new(resource).serializable_hash,
             token: jwt_token
           }, status: :created
         rescue ActiveRecord::RecordInvalid => e

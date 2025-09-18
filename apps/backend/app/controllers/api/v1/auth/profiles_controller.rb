@@ -6,7 +6,7 @@ module Api
       class ProfilesController < Api::BaseController
         def show
           render json: {
-            user: UserSerializer.new(current_user).serializable_hash[:data][:attributes],
+            user: UserSerializer.new(current_user).serializable_hash,
             account: {
               id: current_account.id,
               name: current_account.name,

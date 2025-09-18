@@ -1,27 +1,14 @@
 # frozen_string_literal: true
 
-class UserSerializer
-  def initialize(user)
-    @user = user
-  end
-
+class UserSerializer < ApplicationSerializer
   def serializable_hash
     {
-      data: {
-        id: user.id,
-        type: 'user',
-        attributes: {
-          email: user.email,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          role: user.role,
-          account_id: user.account_id
-        }
-      }
+      id: resource.id,
+      email: resource.email,
+      first_name: resource.first_name,
+      last_name: resource.last_name,
+      role: resource.role,
+      account_id: resource.account_id
     }
   end
-
-  private
-
-  attr_reader :user
 end

@@ -10,7 +10,7 @@ module Api
 
         def respond_with(resource, _opts = {})
           render json: {
-            user: UserSerializer.new(resource).serializable_hash[:data][:attributes],
+            user: UserSerializer.new(resource).serializable_hash,
             token: request.env['warden-jwt_auth.token']
           }, status: :ok
         end
