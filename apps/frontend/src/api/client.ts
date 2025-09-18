@@ -15,9 +15,9 @@ export interface ApiResponse<T> {
 }
 
 export async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<ApiResponse<T>> {
-  const headers: HeadersInit = {
-    'Accept': 'application/json',
-    ...options.headers,
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    ...(options.headers as Record<string, string> | undefined),
   };
   if (options.body && !(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
@@ -91,4 +91,3 @@ function toQS(params: Record<string, any>): string {
   const search = new URLSearchParams(entries as any).toString();
   return `?${search}`;
 }
-

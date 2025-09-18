@@ -46,7 +46,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   }, []);
 
-  const signUp = useCallback(async ({ accountName, planSlug, email, password, passwordConfirmation, firstName, lastName }) => {
+  const signUp = useCallback(async (
+    { accountName, planSlug, email, password, passwordConfirmation, firstName, lastName }: {
+      accountName: string;
+      planSlug?: string;
+      email: string;
+      password: string;
+      passwordConfirmation: string;
+      firstName?: string;
+      lastName?: string;
+    }
+  ) => {
     const res = await api.signUp({ name: accountName, plan_slug: planSlug }, { email, password, password_confirmation: passwordConfirmation, first_name: firstName, last_name: lastName });
     if (!res.ok || !res.data) return false;
     localStorage.setItem('auth_token', res.data.token);
@@ -75,4 +85,3 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
-
