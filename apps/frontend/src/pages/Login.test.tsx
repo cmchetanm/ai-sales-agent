@@ -16,8 +16,8 @@ describe('Login page', () => {
         <Login />
       </MemoryRouter>
     );
-    expect(screen.getByText(/Sign in/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+    const btn = screen.getByRole('button', { name: /sign in/i });
+    expect(btn).toBeInTheDocument();
+    fireEvent.click(btn);
   });
 });
-
