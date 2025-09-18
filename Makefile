@@ -89,7 +89,7 @@ llm-test:
 
 frontend-test:
 	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
-	@$(DOCKER_COMPOSE) run --rm $(FRONTEND_SERVICE) sh -lc "pnpm install --no-frozen-lockfile && pnpm run build"
+	@$(DOCKER_COMPOSE) run --rm $(FRONTEND_SERVICE) sh -lc "pnpm install --no-frozen-lockfile && pnpm run test:ci"
 
 test-all: backend-test emailing-test llm-test frontend-test
 
