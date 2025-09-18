@@ -8,6 +8,7 @@ import { Pipelines } from './pages/Pipelines';
 import { Leads } from './pages/Leads';
 import { Campaigns } from './pages/Campaigns';
 import { Account } from './pages/Account';
+import { AgentChat } from './pages/AgentChat';
 import { Toaster } from 'sonner';
 import { ThemeModeProvider } from './theme';
 
@@ -34,11 +35,12 @@ const App = () => (
               </PrivateRoute>
             }
           >
-            <Route index element={<Dashboard />} />
-            <Route path="pipelines" element={<Pipelines />} />
-            <Route path="leads" element={<Leads />} />
-            <Route path="campaigns" element={<Campaigns />} />
-            <Route path="account" element={<Account />} />
+          <Route index element={<Dashboard />} />
+          <Route path="pipelines" element={<Pipelines />} />
+          <Route path="chat" element={<AgentChat />} />
+          <Route path="leads" element={<Leads />} />
+          <Route path="campaigns" element={<Campaigns />} />
+          <Route path="account" element={<Account />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

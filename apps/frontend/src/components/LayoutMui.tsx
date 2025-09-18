@@ -19,6 +19,7 @@ import {
 import { useTheme } from '@mui/material/styles';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import MailOutlineIcon from '@mui/icons-material/MailOutline';
@@ -53,6 +54,7 @@ export function LayoutMui() {
       <List>
         <NavItem to="/" icon={<DashboardIcon />} label="Dashboard" />
         <NavItem to="/pipelines" icon={<LanOutlinedIcon />} label="Pipelines" />
+        <NavItem to="/chat" icon={<ChatBubbleOutlineIcon />} label="Agent Chat" />
         <NavItem to="/leads" icon={<PeopleAltOutlinedIcon />} label="Leads" />
         <NavItem to="/campaigns" icon={<MailOutlineIcon />} label="Campaigns" />
         <NavItem to="/account" icon={<SettingsOutlinedIcon />} label="Account" />

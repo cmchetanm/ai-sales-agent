@@ -1,0 +1,65 @@
+import { useEffect, useRef, useState } from 'react';
+import { Card, CardContent, IconButton, Stack, TextField, Typography } from '@mui/material';
+import SendIcon from '@mui/icons-material/Send';
+import { useAuth } from '../auth/AuthContext';
+import { api } from '../api/client';
+
+type ChatMsg = { id?: number; role: 'user' | 'assistant'; content: string; sent_at?: string };
+
+export const AgentChat = () => {
+  const { token } = useAuth();
+  const [sessionId, setSessionId] = useState<number | null>(null);
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [input, setInput] = useState('');
+  const [sending, setSending] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  useEffect(() => {
+    const init = async () => {
+      if (!token) return;
+      const res = await api.chatSessionCreate(token);
+      if (res.ok && res.data) setSessionId(res.data.chat_session.id);
+    };
+    init();
+  }, [token]);
+
+  const send = async () => {
+    if (!token || !sessionId || !input.trim()) return;
+    const content = input.trim();
+    setInput('');
+    setSending(true);
+    setMessages((prev) => [...prev, { role: 'user', content }]);
+    const res = await api.chatMessagesCreate(token, sessionId, content);
+    setSending(false);
+    if (res.ok && res.data) {
+      setMessages((prev) => [...prev, { role: 'assistant', content: res.data.assistant.content }]);
+    }
+  };
+
+  return (
+    <Stack spacing={2}>
+      <Typography variant="h5" fontWeight={700}>Agent Chat</Typography>
+      <Card>
+        <CardContent>
+          <div style={{ maxHeight: 480, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {messages.map((m, i) => (
+              <div key={i} style={{ alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '75%' }}>
+                <div style={{ padding: '8px 12px', borderRadius: 12, background: m.role === 'user' ? '#4f46e5' : '#0f172a', color: '#fff' }}>
+                  {m.content}
+                </div>
+              </div>
+            ))}
+            <div ref={bottomRef} />
+          </div>
+        </CardContent>
+      </Card>
+      <Stack direction="row" spacing={1}>
+        <TextField fullWidth size="small" placeholder="Ask the agent..." value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') send(); }} />
+        <IconButton color="primary" onClick={send} disabled={sending || !input.trim()}><SendIcon /></IconButton>
+      </Stack>
+    </Stack>
+  );
+};
+

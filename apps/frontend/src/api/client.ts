@@ -113,6 +113,26 @@ export const api = {
     { method: 'DELETE' },
     token
   ),
+  chatSessionCreate: (token: string) => request<{ chat_session: { id: number } }>(
+    '/api/v1/chat_sessions',
+    { method: 'POST' },
+    token
+  ),
+  chatSessionShow: (token: string, id: number) => request<{ chat_session: { id: number; messages: any[] } }>(
+    `/api/v1/chat_sessions/${id}`,
+    {},
+    token
+  ),
+  chatMessagesIndex: (token: string, chatSessionId: number) => request<{ messages: any[] }>(
+    `/api/v1/chat_sessions/${chatSessionId}/messages`,
+    {},
+    token
+  ),
+  chatMessagesCreate: (token: string, chatSessionId: number, content: string) => request<{ user: any; assistant: any }>(
+    `/api/v1/chat_sessions/${chatSessionId}/messages`,
+    { method: 'POST', body: JSON.stringify({ message: { content } }) },
+    token
+  ),
 };
 
 function toQS(params: Record<string, any>): string {
