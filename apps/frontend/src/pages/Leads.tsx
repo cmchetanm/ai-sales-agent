@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
+import { Button, Card, CardContent, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
 
 export const Leads = () => {
   const { token } = useAuth();
@@ -34,38 +35,39 @@ export const Leads = () => {
   const pipelineOptions = useMemo(() => [{ id: '', name: 'All Pipelines' }, ...pipelines], [pipelines]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="page-title">Leads</h1>
-      </div>
-      <div className="card p-4 flex items-center gap-3">
-        <label className="label">Pipeline</label>
-        <select className="input max-w-xs" value={pipelineId as any} onChange={(e) => setPipelineId((e.target.value as any) || '')}>
-          {pipelineOptions.map((p) => <option key={p.id ?? 'all'} value={p.id}>{p.name}</option>)}
-        </select>
-      </div>
-      <form onSubmit={create} className="card p-4 flex items-center gap-3">
-        <input className="input max-w-sm" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="lead@example.com" />
-        <button className="btn btn-primary" disabled={loading || !pipelineId} type="submit">Create Lead</button>
-      </form>
-      <div className="card overflow-hidden">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Email</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
+    <>
+      <Typography variant="h5" fontWeight={700} gutterBottom>Leads</Typography>
+      <Card sx={{ mb: 2 }}>
+        <CardContent sx={{ display: 'flex', gap: 1 }}>
+          <TextField select size="small" label="Pipeline" value={pipelineId as any} onChange={(e) => setPipelineId((e.target.value as any) || '')} sx={{ minWidth: 220 }}>
+            {pipelineOptions.map((p) => <MenuItem key={p.id ?? 'all'} value={p.id}>{p.name}</MenuItem>)}
+          </TextField>
+        </CardContent>
+      </Card>
+      <Card sx={{ mb: 2 }}>
+        <CardContent sx={{ display: 'flex', gap: 1 }}>
+          <TextField size="small" label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Button variant="contained" disabled={loading || !pipelineId} onClick={create as any}>Create Lead</Button>
+        </CardContent>
+      </Card>
+      <TableContainer component={Card}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>Email</TableCell>
+              <TableCell>Status</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
             {items.map((l) => (
-              <tr key={l.id} className="border-t border-slate-800/60">
-                <td className="font-medium">{l.email}</td>
-                <td className="text-slate-400">{l.status}</td>
-              </tr>
+              <TableRow key={l.id} hover>
+                <TableCell>{l.email}</TableCell>
+                <TableCell>{l.status}</TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </>
   );
 };

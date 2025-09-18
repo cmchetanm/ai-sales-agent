@@ -1,6 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
-import { Layout } from './components/Layout';
+import { LayoutMui } from './components/LayoutMui';
 import { Dashboard } from './pages/Dashboard';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
@@ -9,6 +9,8 @@ import { Leads } from './pages/Leads';
 import { Campaigns } from './pages/Campaigns';
 import { Account } from './pages/Account';
 import { Toaster } from 'sonner';
+import { ThemeProvider, CssBaseline } from '@mui/material';
+import { theme } from './theme';
 
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
   const { token, loading } = useAuth();
@@ -20,30 +22,33 @@ const PrivateRoute = ({ children }: { children: JSX.Element }) => {
 const App = () => (
   <AuthProvider>
     <BrowserRouter>
-      <Toaster position="top-right" theme="dark" richColors />
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route
-          path="/"
-          element={
-            <PrivateRoute>
-              <MainLayout />
-            </PrivateRoute>
-          }
-        >
-          <Route index element={<Dashboard />} />
-          <Route path="pipelines" element={<Pipelines />} />
-          <Route path="leads" element={<Leads />} />
-          <Route path="campaigns" element={<Campaigns />} />
-          <Route path="account" element={<Account />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Toaster position="top-right" theme="dark" richColors />
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route
+            path="/"
+            element={
+              <PrivateRoute>
+                <MainLayout />
+              </PrivateRoute>
+            }
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="pipelines" element={<Pipelines />} />
+            <Route path="leads" element={<Leads />} />
+            <Route path="campaigns" element={<Campaigns />} />
+            <Route path="account" element={<Account />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </ThemeProvider>
     </BrowserRouter>
   </AuthProvider>
 );
 
-const MainLayout = () => <Layout />;
+const MainLayout = () => <LayoutMui />;
 
 export default App;

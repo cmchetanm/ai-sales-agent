@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { Box, Button, Card, CardContent, Stack, TextField, Typography } from '@mui/material';
 
 export const Login = () => {
   const { signIn } = useAuth();
@@ -21,18 +22,20 @@ export const Login = () => {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-6">
-      <form onSubmit={onSubmit} className="card w-full max-w-md p-6 space-y-3">
-        <h2 className="text-xl font-semibold">Sign in</h2>
-        {error && <div className="rounded-lg border border-red-500/50 bg-red-500/10 text-red-200 px-3 py-2">{error}</div>}
-        <label className="label">Email</label>
-        <input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
-        <label className="label">Password</label>
-        <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        <button className="btn btn-primary w-full" disabled={loading} type="submit">{loading ? 'Signing in…' : 'Sign in'}</button>
-        <div className="text-sm text-slate-400">No account? <Link className="text-brand-400 hover:text-brand-300" to="/signup">Create one</Link></div>
-      </form>
-    </main>
+    <Box minHeight="100vh" display="flex" alignItems="center" justifyContent="center" p={2}>
+      <Card sx={{ width: 420 }}>
+        <CardContent>
+          <Stack component="form" onSubmit={onSubmit} spacing={2}>
+            <Typography variant="h5" fontWeight={700}>Sign in</Typography>
+            {error && <Typography color="error" variant="body2">{error}</Typography>}
+            <TextField label="Email" value={email} onChange={(e) => setEmail(e.target.value)} fullWidth size="small" />
+            <TextField label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} fullWidth size="small" />
+            <Button variant="contained" type="submit" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</Button>
+            <Typography variant="body2" color="text.secondary">No account? <Link to="/signup">Create one</Link></Typography>
+          </Stack>
+        </CardContent>
+      </Card>
+    </Box>
   );
 };
  

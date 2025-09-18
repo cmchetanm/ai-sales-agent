@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
+import { Button, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
 
 export const Pipelines = () => {
   const { token } = useAuth();
@@ -26,32 +27,32 @@ export const Pipelines = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="page-title">Pipelines</h1>
-      </div>
-      <form onSubmit={create} className="card p-4 flex items-center gap-3">
-        <input className="input max-w-sm" value={name} onChange={(e) => setName(e.target.value)} placeholder="Pipeline name" />
-        <button className="btn btn-primary" disabled={loading} type="submit">Create</button>
-      </form>
-      <div className="card overflow-hidden">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
+    <>
+      <Typography variant="h5" fontWeight={700} gutterBottom>Pipelines</Typography>
+      <Card sx={{ mb: 2 }}>
+        <CardContent sx={{ display: 'flex', gap: 1 }}>
+          <TextField size="small" label="Pipeline name" value={name} onChange={(e) => setName(e.target.value)} />
+          <Button variant="contained" disabled={loading} onClick={create as any}>Create</Button>
+        </CardContent>
+      </Card>
+      <TableContainer component={Card}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              <TableCell>Status</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
             {items.map((p) => (
-              <tr key={p.id} className="border-t border-slate-800/60">
-                <td className="font-medium">{p.name}</td>
-                <td className="text-slate-400">{p.status}</td>
-              </tr>
+              <TableRow key={p.id} hover>
+                <TableCell>{p.name}</TableCell>
+                <TableCell>{p.status}</TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </>
   );
 };

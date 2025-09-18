@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
+import { Card, CardContent, Grid2 as Grid, Typography } from '@mui/material';
 
 export const Dashboard = () => {
   const { token, user, account } = useAuth();
@@ -16,25 +17,31 @@ export const Dashboard = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="page-title">Dashboard</h1>
-        <p className="text-slate-400">High-level view of your sales workspace.</p>
-      </div>
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="card p-4">
-          <div className="text-sm text-slate-400">Backend</div>
-          <div className="text-2xl font-semibold capitalize">{health}</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-sm text-slate-400">User</div>
-          <div className="text-2xl font-semibold">{user?.email}</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-sm text-slate-400">Account</div>
-          <div className="text-2xl font-semibold">{account?.name}</div>
-        </div>
-      </div>
-    </div>
+    <>
+      <Typography variant="h5" fontWeight={700} gutterBottom>Dashboard</Typography>
+      <Typography variant="body2" color="text.secondary" gutterBottom>
+        High-level view of your sales workspace.
+      </Typography>
+      <Grid container spacing={2} sx={{ mt: 1 }}>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Card><CardContent>
+            <Typography variant="caption" color="text.secondary">Backend</Typography>
+            <Typography variant="h5" fontWeight={700} textTransform="capitalize">{health}</Typography>
+          </CardContent></Card>
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Card><CardContent>
+            <Typography variant="caption" color="text.secondary">User</Typography>
+            <Typography variant="h5" fontWeight={700}>{user?.email}</Typography>
+          </CardContent></Card>
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Card><CardContent>
+            <Typography variant="caption" color="text.secondary">Account</Typography>
+            <Typography variant="h5" fontWeight={700}>{account?.name}</Typography>
+          </CardContent></Card>
+        </Grid>
+      </Grid>
+    </>
   );
 };

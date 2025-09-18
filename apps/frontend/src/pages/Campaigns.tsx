@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
+import { Button, Card, CardContent, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
 
 export const Campaigns = () => {
   const { token } = useAuth();
@@ -32,36 +33,36 @@ export const Campaigns = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="page-title">Campaigns</h1>
-      </div>
-      <form onSubmit={create} className="card p-4 flex items-center gap-3">
-        <input className="input max-w-sm" value={name} onChange={(e) => setName(e.target.value)} placeholder="Campaign name" />
-        <select className="input max-w-xs" value={pipelineId as any} onChange={(e) => setPipelineId((e.target.value as any) || '')}>
-          <option value="">(No pipeline)</option>
-          {pipelines.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-        <button className="btn btn-primary" disabled={loading} type="submit">Create</button>
-      </form>
-      <div className="card overflow-hidden">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
+    <>
+      <Typography variant="h5" fontWeight={700} gutterBottom>Campaigns</Typography>
+      <Card sx={{ mb: 2 }}>
+        <CardContent sx={{ display: 'flex', gap: 1 }}>
+          <TextField size="small" label="Campaign" value={name} onChange={(e) => setName(e.target.value)} />
+          <TextField select size="small" label="Pipeline" value={pipelineId as any} onChange={(e) => setPipelineId((e.target.value as any) || '')} sx={{ minWidth: 220 }}>
+            <MenuItem value="">(No pipeline)</MenuItem>
+            {pipelines.map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
+          </TextField>
+          <Button variant="contained" disabled={loading} onClick={create as any}>Create</Button>
+        </CardContent>
+      </Card>
+      <TableContainer component={Card}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              <TableCell>Status</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
             {items.map((c) => (
-              <tr key={c.id} className="border-t border-slate-800/60">
-                <td className="font-medium">{c.name}</td>
-                <td className="text-slate-400">{c.status}</td>
-              </tr>
+              <TableRow key={c.id} hover>
+                <TableCell>{c.name}</TableCell>
+                <TableCell>{c.status}</TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </>
   );
 };
