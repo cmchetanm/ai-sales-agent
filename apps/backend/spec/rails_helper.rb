@@ -10,6 +10,9 @@ require 'rspec/rails'
 require 'sidekiq/testing'
 Sidekiq::Testing.inline!
 require 'devise/jwt/test_helpers'
+require 'webmock/rspec'
+
+WebMock.disable_net_connect!(allow_localhost: true)
 
 Rails.root.glob('spec/support/**/*.rb').sort.each { |file| require file }
 

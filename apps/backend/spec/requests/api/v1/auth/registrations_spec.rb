@@ -16,7 +16,8 @@ RSpec.describe 'API V1 Auth Registrations', type: :request do
 
   describe 'POST /api/v1/auth/sign_up' do
     it 'creates an account and owner user' do
-      post '/api/v1/auth/sign_up', params: {
+      expect do
+        post '/api/v1/auth/sign_up', params: {
         account: { name: 'Acme Inc', plan_slug: 'basic' },
         user: {
           email: 'owner@acme.test',
@@ -26,14 +27,14 @@ RSpec.describe 'API V1 Auth Registrations', type: :request do
           last_name: 'Owner'
         }
       }.to_json, headers: headers
+      end.to change(Account, :count).by(1).and change(User, :count).by(1)
 
       expect(response).to have_http_status(:created)
       body = json_body
       expect(body['account']['name']).to eq('Acme Inc')
       expect(body['user']['email']).to eq('owner@acme.test')
       expect(body['token']).to be_present
-      expect(Account.count).to eq(1)
-      expect(User.count).to eq(1)
+      expect(Account.last.name).to eq('Acme Inc')
     end
 
     it 'returns errors when plan is missing' do
