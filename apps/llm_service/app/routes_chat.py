@@ -2,6 +2,7 @@ import os
 from fastapi import APIRouter
 from .schemas import ChatRequest, ChatResponse
 from typing import List, Dict
+import httpx
 
 USE_OPENAI = bool(os.getenv("OPENAI_API_KEY"))
 llm = None
@@ -54,8 +55,47 @@ def _generate_reply(messages: List[Dict]) -> str:
     return "Got it. Could you share industry, target roles, and geography to start?"
 
 
+def _extract_filters(text: str) -> Dict[str, str]:
+    t = text.lower()
+    role = 'cto' if 'cto' in t or 'engineering' in t else ('marketing' if 'marketing' in t else '')
+    location = 'us' if 'us' in t or 'united states' in t else ('india' if 'india' in t else '')
+    keywords = ''
+    return {"role": role, "location": location, "keywords": keywords}
+
+
+def _post_internal(path: str, payload: Dict) -> bool:
+    base = os.getenv("BACKEND_INTERNAL_URL", "http://backend:3000")
+    token = os.getenv("INTERNAL_API_TOKEN", "")
+    if not token:
+        return False
+    try:
+        with httpx.Client(timeout=5.0) as c:
+            r = c.post(f"{base}{path}", headers={"X-Internal-Token": token}, json=payload)
+            return r.status_code < 400
+    except Exception:
+        return False
+
+
 @router.post("/messages", response_model=ChatResponse)
 async def chat_messages(req: ChatRequest) -> ChatResponse:
     context = [{"role": "system", "content": SYSTEM_PROMPT}] + [m.model_dump() for m in req.messages]
     reply = _generate_reply(context)
+    # Heuristic tool use: if user provided targeting details, persist and trigger fetch
+    last_user = next((m.content for m in req.messages[::-1] if m.role == 'user'), "")
+    if last_user:
+        filters = _extract_filters(last_user)
+        # Save profile free text
+        _post_internal(
+            "/api/v1/internal/profile_update",
+            {"account_id": req.account_id, "profile": {"questionnaire": {"free_text": last_user}}},
+        )
+        if any(filters.values()):
+            _post_internal(
+                "/api/v1/internal/apollo_fetch",
+                {"account_id": req.account_id, "filters": filters},
+            )
+            reply = (
+                "Thanks — I saved your preferences and started fetching leads. "
+                "You can refine industry, roles, or geography to improve results."
+            )
     return ChatResponse(reply=reply, session_id=req.session_id)

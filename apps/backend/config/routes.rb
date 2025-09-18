@@ -51,6 +51,11 @@ Rails.application.routes.draw do
       namespace :integrations do
         resource :apollo, only: :create
       end
+      post 'integrations/apollo', to: 'integrations/apollo#create'
+      namespace :internal do
+        post 'profile_update', to: 'internal/tools#profile_update'
+        post 'apollo_fetch', to: 'internal/tools#apollo_fetch'
+      end
       resource :account, only: %i[show update]
 
       namespace :auth do
@@ -66,4 +71,7 @@ Rails.application.routes.draw do
   mount Sidekiq::Web => '/sidekiq'
 
   root to: 'api/v1/health#show'
+
+  # Explicit route for test environment safety
+  post '/api/v1/integrations/apollo', to: 'api/v1/integrations/apollo#create'
 end
