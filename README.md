@@ -28,9 +28,24 @@ Detailed setup instructions will be added as the individual services are impleme
 - Visit `http://localhost:5173` for the frontend and `http://localhost:3000/api/v1/health` for the backend health probe.
 - When finished, stop everything with `make down ENV=development`.
 
+### API docs
+
+- OpenAPI (minimal): `http://localhost:3000/api/v1/openapi.yaml`
+- Swagger UI: `http://localhost:3000/api/v1/api-docs`
+
+### Demo data
+
+- Seed demo plan/account/user/pipeline/leads/campaign:
+  `make seed ENV=development`
+- Demo login: `demo@acme.test` / `DemoPass123!`
+
 ### Testing
 
 - Backend API specs: `make backend-test`
 - Emailing service specs: `make emailing-test`
 - Frontend build check: `make frontend-test`
 - Run everything (including placeholder services): `make test-all`
+
+### Security
+
+- Rate limiting via Rack::Attack is enabled in production and can be toggled locally with `RACK_ATTACK_ENABLED=true` in `ops/env/.env.development`.
