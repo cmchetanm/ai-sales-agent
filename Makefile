@@ -1,6 +1,15 @@
 SHELL := /bin/bash
 ENV ?= development
-COMPOSE_FILE := ops/compose/docker-compose.$(ENV).yml
+
+ifeq ($(ENV),development)
+COMPOSE_SUFFIX := dev
+else ifeq ($(ENV),production)
+COMPOSE_SUFFIX := prod
+else
+COMPOSE_SUFFIX := $(ENV)
+endif
+
+COMPOSE_FILE := ops/compose/docker-compose.$(COMPOSE_SUFFIX).yml
 ENV_FILE := ops/env/.env.$(ENV)
 
 DOCKER_COMPOSE := docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE)
