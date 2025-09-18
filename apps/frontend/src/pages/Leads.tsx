@@ -1,7 +1,11 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
-import { Button, Card, CardContent, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Button, Card, CardContent, IconButton, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { toast } from 'sonner';
 
 export const Leads = () => {
   const { token } = useAuth();
@@ -10,6 +14,8 @@ export const Leads = () => {
   const [pipelineId, setPipelineId] = useState<number | ''>('' as any);
   const [email, setEmail] = useState('lead@example.com');
   const [loading, setLoading] = useState(false);
+  const [editing, setEditing] = useState<{ id: number; email: string } | null>(null);
+  const [deleting, setDeleting] = useState<number | null>(null);
 
   const load = async () => {
     if (!token) return;
@@ -30,6 +36,30 @@ export const Leads = () => {
     const res = await api.leadsCreate(token, { pipeline_id: pipelineId, email, status: 'new' });
     setLoading(false);
     if (res.ok) await load();
+  };
+
+  const submitEdit = async () => {
+    if (!token || !editing) return;
+    const res = await api.leadsUpdate(token, editing.id, { email: editing.email });
+    if (res.ok) {
+      toast.success('Lead updated');
+      setEditing(null);
+      await load();
+    } else {
+      toast.error('Update failed');
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!token || deleting == null) return;
+    const res = await api.leadsDelete(token, deleting);
+    setDeleting(null);
+    if (res.ok) {
+      toast.success('Lead deleted');
+      await load();
+    } else {
+      toast.error('Delete failed');
+    }
   };
 
   const pipelineOptions = useMemo(() => [{ id: '', name: 'All Pipelines' }, ...pipelines], [pipelines]);
@@ -56,6 +86,7 @@ export const Leads = () => {
             <TableRow>
               <TableCell>Email</TableCell>
               <TableCell>Status</TableCell>
+              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -63,11 +94,33 @@ export const Leads = () => {
               <TableRow key={l.id} hover>
                 <TableCell>{l.email}</TableCell>
                 <TableCell>{l.status}</TableCell>
+                <TableCell align="right">
+                  <IconButton size="small" aria-label="edit" onClick={() => setEditing({ id: l.id, email: l.email })}><EditIcon fontSize="small" /></IconButton>
+                  <IconButton size="small" aria-label="delete" onClick={() => setDeleting(l.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
+      <Dialog open={!!editing} onClose={() => setEditing(null)}>
+        <DialogTitle>Edit Lead</DialogTitle>
+        <DialogContent>
+          <TextField autoFocus margin="dense" fullWidth label="Email" value={editing?.email || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, email: e.target.value } : prev)} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditing(null)}>Cancel</Button>
+          <Button onClick={submitEdit} variant="contained">Save</Button>
+        </DialogActions>
+      </Dialog>
+
+      <ConfirmDialog
+        open={deleting != null}
+        title="Delete lead?"
+        message="This cannot be undone."
+        onClose={() => setDeleting(null)}
+        onConfirm={confirmDelete}
+      />
     </>
   );
 };

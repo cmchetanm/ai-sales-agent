@@ -63,6 +63,16 @@ export const api = {
     { method: 'POST', body: JSON.stringify({ pipeline: attrs }) },
     token
   ),
+  pipelinesUpdate: (token: string, id: number, attrs: any) => request<{ pipeline: any }>(
+    `/api/v1/pipelines/${id}`,
+    { method: 'PATCH', body: JSON.stringify({ pipeline: attrs }) },
+    token
+  ),
+  pipelinesDelete: (token: string, id: number) => request<void>(
+    `/api/v1/pipelines/${id}`,
+    { method: 'DELETE' },
+    token
+  ),
   leadsIndex: (token: string, params: Record<string, any> = {}) => request<{ leads: any[]; pagination: any }>(
     `/api/v1/leads${toQS(params)}`,
     {},
@@ -73,6 +83,16 @@ export const api = {
     { method: 'POST', body: JSON.stringify({ lead: attrs }) },
     token
   ),
+  leadsUpdate: (token: string, id: number, attrs: any) => request<{ lead: any }>(
+    `/api/v1/leads/${id}`,
+    { method: 'PATCH', body: JSON.stringify({ lead: attrs }) },
+    token
+  ),
+  leadsDelete: (token: string, id: number) => request<void>(
+    `/api/v1/leads/${id}`,
+    { method: 'DELETE' },
+    token
+  ),
   campaignsIndex: (token: string, params: Record<string, any> = {}) => request<{ campaigns: any[]; pagination: any }>(
     `/api/v1/campaigns${toQS(params)}`,
     {},
@@ -81,6 +101,16 @@ export const api = {
   campaignsCreate: (token: string, attrs: any) => request<{ campaign: any }>(
     '/api/v1/campaigns',
     { method: 'POST', body: JSON.stringify({ campaign: attrs }) },
+    token
+  ),
+  campaignsUpdate: (token: string, id: number, attrs: any) => request<{ campaign: any }>(
+    `/api/v1/campaigns/${id}`,
+    { method: 'PATCH', body: JSON.stringify({ campaign: attrs }) },
+    token
+  ),
+  campaignsDelete: (token: string, id: number) => request<void>(
+    `/api/v1/campaigns/${id}`,
+    { method: 'DELETE' },
     token
   ),
 };
