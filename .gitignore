@@ -37,6 +37,9 @@ __pycache__/
 # Env files
 ops/env/.env.*.local
 ops/env/.env.*.secrets
+# Ignore committed envs; track only *.example
+ops/env/.env.*
+!ops/env/.env.*.example
 
 # Docker
 *.pid
