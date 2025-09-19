@@ -19,8 +19,8 @@ describe('Campaigns page', () => {
         <Campaigns />
       </MemoryRouter>
     );
-    expect(await screen.findByText('Campaigns')).toBeInTheDocument();
+    // Title or main control visible
+    expect(await screen.findByText(/New Campaign/i)).toBeInTheDocument();
     expect(await screen.findByText('Welcome Series')).toBeInTheDocument();
   });
 });
-

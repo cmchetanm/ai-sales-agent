@@ -10,6 +10,7 @@ import { PaginationControls } from '../components/PaginationControls';
 import { SearchBar } from '../components/SearchBar';
 import { useQueryState } from '../hooks/useQueryState';
 import { CreateCampaignDialog } from '../components/CreateCampaignDialog';
+import { useTranslation } from 'react-i18next';
 
 export const Campaigns = () => {
   const { token } = useAuth();
@@ -27,6 +28,7 @@ export const Campaigns = () => {
   const [order, setOrder] = useQueryState('order', 'asc');
   const [status, setStatus] = useQueryState('status', '');
   const [q, setQ] = useQueryState('q', '');
+  const { t } = useTranslation();
 
   const load = async (targetPage = page) => {
     if (!token) return;
@@ -38,7 +40,7 @@ export const Campaigns = () => {
       setItems(cRes.data.campaigns);
       const p = (cRes.data as any).pagination; if (p) { setPages(p.pages); setPage(p.page); }
     } else {
-      toast.error('Failed to load');
+      toast.error(t('campaigns.delete_failed'));
     }
     if (pRes.ok && pRes.data) setPipelines(pRes.data.pipelines);
   };
@@ -58,11 +60,11 @@ export const Campaigns = () => {
     if (!token || !editing) return;
     const res = await api.campaignsUpdate(token, editing.id, { name: editing.name, status: editing.status });
     if (res.ok) {
-      toast.success('Campaign updated');
+      toast.success(t('campaigns.updated'));
       setEditing(null);
       await load();
     } else {
-      toast.error('Update failed');
+      toast.error(t('campaigns.update_failed'));
     }
   };
 
@@ -71,29 +73,29 @@ export const Campaigns = () => {
     const res = await api.campaignsDelete(token, deleting);
     setDeleting(null);
     if (res.ok) {
-      toast.success('Campaign deleted');
+      toast.success(t('campaigns.deleted'));
       await load();
     } else {
-      toast.error('Delete failed');
+      toast.error(t('campaigns.delete_failed'));
     }
   };
 
   return (
     <>
-      <Typography variant="h5" fontWeight={700} gutterBottom>Campaigns</Typography>
+      <Typography variant="h5" fontWeight={700} gutterBottom>{t('campaigns.title')}</Typography>
       <Card sx={{ mb: 2 }}>
         <CardContent sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <TextField size="small" label="Campaign" value={name} onChange={(e) => setName(e.target.value)} />
-          <TextField select size="small" label="Pipeline" value={pipelineId as any} onChange={(e) => setPipelineId((e.target.value as any) || '')} sx={{ minWidth: 220 }}>
+          <TextField size="small" label={t('campaigns.title')} value={name} onChange={(e) => setName(e.target.value)} />
+          <TextField select size="small" label={t('leads.pipeline')} value={pipelineId as any} onChange={(e) => setPipelineId((e.target.value as any) || '')} sx={{ minWidth: 220 }}>
             <MenuItem value="">(No pipeline)</MenuItem>
             {pipelines.map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
           </TextField>
-          <TextField select size="small" label="Status" value={status} onChange={(e) => setStatus(e.target.value)} sx={{ minWidth: 180 }}>
-            <MenuItem value="">All</MenuItem>
+          <TextField select size="small" label={t('common.status')} value={status} onChange={(e) => setStatus(e.target.value)} sx={{ minWidth: 180 }}>
+            <MenuItem value="">{t('leads.all')}</MenuItem>
             {['draft','scheduled','running','paused','completed','archived'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
           </TextField>
-          <SearchBar value={q} onChange={setQ} placeholder="Search campaigns" />
-          <Button variant="contained" onClick={() => setCreateOpen(true)}>New Campaign</Button>
+          <SearchBar value={q} onChange={setQ} placeholder={t('campaigns.search')} />
+          <Button variant="contained" onClick={() => setCreateOpen(true)}>{t('campaigns.new')}</Button>
         </CardContent>
       </Card>
       <TableContainer component={Card}>
@@ -102,15 +104,15 @@ export const Campaigns = () => {
             <TableRow>
               <TableCell sortDirection={orderBy === 'name' ? (order as any) : false}>
                 <TableSortLabel active={orderBy === 'name'} direction={orderBy === 'name' ? (order as any) : 'asc'} onClick={() => setOrder(orderBy === 'name' && order === 'asc' ? 'desc' : 'asc') || setOrderBy('name')}>
-                  Name
+                  {t('common.name')}
                 </TableSortLabel>
               </TableCell>
               <TableCell sortDirection={orderBy === 'status' ? (order as any) : false}>
                 <TableSortLabel active={orderBy === 'status'} direction={orderBy === 'status' ? (order as any) : 'asc'} onClick={() => setOrder(orderBy === 'status' && order === 'asc' ? 'desc' : 'asc') || setOrderBy('status')}>
-                  Status
+                  {t('common.status')}
                 </TableSortLabel>
               </TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell align="right">{t('common.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -127,7 +129,7 @@ export const Campaigns = () => {
                     onChange={async (e) => {
                       const next = e.target.value;
                       const res = await api.campaignsUpdate(token!, c.id, { status: next });
-                      if (res.ok) { toast.success('Status updated'); await load(); } else { toast.error('Update failed'); }
+                      if (res.ok) { toast.success(t('campaigns.updated')); await load(); } else { toast.error(t('campaigns.update_failed')); }
                     }}
                   >
                     {['draft','scheduled','running','paused','completed','archived'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
@@ -144,23 +146,23 @@ export const Campaigns = () => {
       </TableContainer>
       <PaginationControls page={page} pages={pages} onPageChange={(p) => load(p)} disabled={loading} />
       <Dialog open={!!editing} onClose={() => setEditing(null)}>
-        <DialogTitle>Edit Campaign</DialogTitle>
+        <DialogTitle>{t('campaigns.edit_title')}</DialogTitle>
         <DialogContent sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>
-          <TextField autoFocus margin="dense" fullWidth label="Name" value={editing?.name || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, name: e.target.value } : prev)} />
-          <TextField select label="Status" value={editing?.status || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, status: e.target.value } : prev)}>
+          <TextField autoFocus margin="dense" fullWidth label={t('common.name')} value={editing?.name || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, name: e.target.value } : prev)} />
+          <TextField select label={t('common.status')} value={editing?.status || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, status: e.target.value } : prev)}>
             {['draft','scheduled','running','paused','completed','archived'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
           </TextField>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditing(null)}>Cancel</Button>
-          <Button onClick={submitEdit} variant="contained">Save</Button>
+          <Button onClick={() => setEditing(null)}>{t('common.cancel')}</Button>
+          <Button onClick={submitEdit} variant="contained">{t('common.save')}</Button>
         </DialogActions>
       </Dialog>
 
       <ConfirmDialog
         open={deleting != null}
-        title="Delete campaign?"
-        message="This cannot be undone."
+        title={t('campaigns.delete_title')}
+        message={t('campaigns.delete_msg')}
         onClose={() => setDeleting(null)}
         onConfirm={confirmDelete}
       />

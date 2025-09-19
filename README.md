@@ -39,6 +39,18 @@ Detailed setup instructions will be added as the individual services are impleme
   `make seed ENV=development`
 - Demo login: `demo@acme.test` / `DemoPass123!`
 
+### Apollo integration
+
+- Default behavior uses sample results in development/test. To enable real Apollo API calls locally, set `APOLLO_ENABLED=true` and provide a valid `APOLLO_API_KEY` in `ops/env/.env.development`, then restart services.
+
+### Localization
+
+- Backend and emailing services respect `Accept-Language` and `?locale=` (supported: `en`, `es`). Error messages are localized; API status tokens remain stable.
+- Frontend uses react-i18next with language detection and a language selector in the header. Default language is English; Spanish is included as an example.
+- LLM service localizes system and heuristic messages from `Accept-Language`.
+ - API endpoints are available both under `/api/v1/...` and `/:locale/api/v1/...`.
+   - To force clients to use localized prefixes, enable 307 redirects with `API_LOCALE_REDIRECT_ENABLED=true` (preserves method/body for POST/PATCH/DELETE).
+
 ### Testing
 
 - Backend API specs: `make backend-test`

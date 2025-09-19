@@ -29,3 +29,7 @@
 
 en:
   hello: "Hello world"
+  errors:
+    not_authorized: "Not authorized"
+    not_found: "Not found"
+    bad_request: "Bad request"

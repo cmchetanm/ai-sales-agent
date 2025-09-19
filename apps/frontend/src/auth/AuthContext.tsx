@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client';
+import i18n from '../i18n';
 
 type User = any;
 type Account = any;
@@ -29,6 +30,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (res.ok && res.data) {
       setUser(res.data.user);
       setAccount(res.data.account);
+      try {
+        const preferred = res.data.account?.profile?.questionnaire?.locale;
+        const current = i18n.language.split('-')[0];
+        if (preferred && preferred !== current) {
+          await i18n.changeLanguage(preferred);
+        }
+      } catch {}
     }
     setLoading(false);
   }, [token]);

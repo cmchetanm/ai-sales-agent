@@ -29,41 +29,57 @@ import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { useAuth } from '../auth/AuthContext';
 import { ColorModeContext } from '../theme';
+import { useTranslation } from 'react-i18next';
+import { MenuItem, Select } from '@mui/material';
+import { useLocation, useParams } from 'react-router-dom';
+import { api } from '../api/client';
 
 const drawerWidth = 260;
 
 export function LayoutMui() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { account, user, signOut } = useAuth();
+  const { account, user, signOut, token } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
   const colorMode = React.useContext(ColorModeContext);
+  const { t, i18n } = useTranslation();
+  const location = useLocation();
+  const params = useParams();
+  const currentLang = (params.lng || i18n.language || 'en').split('-')[0];
+  const [lang, setLang] = useState(currentLang);
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
-  const logout = async () => { await signOut(); navigate('/login'); };
+  const logout = async () => { await signOut(); navigate(`/${lang}/login`); };
 
   const drawer = (
     <div>
       <Toolbar>
         <Box>
-          <Typography variant="h6" fontWeight={700}>AI Sales Agent</Typography>
+          <Typography variant="h6" fontWeight={700}>{t('app.title')}</Typography>
           <Typography variant="caption" color="text.secondary">{account?.name}</Typography>
         </Box>
       </Toolbar>
       <Divider />
       <List>
-        <NavItem to="/" icon={<DashboardIcon />} label="Dashboard" />
-        <NavItem to="/pipelines" icon={<LanOutlinedIcon />} label="Pipelines" />
-        <NavItem to="/chat" icon={<ChatBubbleOutlineIcon />} label="Agent Chat" />
-        <NavItem to="/leads" icon={<PeopleAltOutlinedIcon />} label="Leads" />
-        <NavItem to="/campaigns" icon={<MailOutlineIcon />} label="Campaigns" />
-        <NavItem to="/account" icon={<SettingsOutlinedIcon />} label="Account" />
+        <NavItem baseLang={lang} to="/" icon={<DashboardIcon />} label={t('nav.dashboard')} />
+        <NavItem baseLang={lang} to="/pipelines" icon={<LanOutlinedIcon />} label={t('nav.pipelines')} />
+        <NavItem baseLang={lang} to="/chat" icon={<ChatBubbleOutlineIcon />} label={t('nav.chat')} />
+        <NavItem baseLang={lang} to="/leads" icon={<PeopleAltOutlinedIcon />} label={t('nav.leads')} />
+        <NavItem baseLang={lang} to="/campaigns" icon={<MailOutlineIcon />} label={t('nav.campaigns')} />
+        <NavItem baseLang={lang} to="/account" icon={<SettingsOutlinedIcon />} label={t('nav.account')} />
       </List>
       <Box sx={{ position: 'absolute', bottom: 8, left: 0, right: 0, px: 2 }}>
         <Divider sx={{ mb: 1 }} />
         <Box display="flex" alignItems="center" gap={1} justifyContent="space-between">
           <Typography variant="caption" color="text.secondary" noWrap>{user?.email}</Typography>
-          <Button size="small" startIcon={<LogoutIcon />} variant="outlined" onClick={logout}>Logout</Button>
+          <div>
+            <Select size="small" value={lang} onChange={async (e) => { const l = e.target.value as string; setLang(l); i18n.changeLanguage(l); const parts = location.pathname.split('/'); if (parts[1]) { parts[1] = l; } else { parts.splice(1, 0, l); } navigate(parts.join('/')); try { if (token) { const currentQ = (account as any)?.profile?.questionnaire || {}; await api.accountUpdate(token, { profile_attributes: { questionnaire: { ...currentQ, locale: l } } }); } } catch {} }} sx={{ mr: 1 }}>
+              <MenuItem value="en">EN</MenuItem>
+              <MenuItem value="es">ES</MenuItem>
+              <MenuItem value="fr">FR</MenuItem>
+            </Select>
+            <Button size="small" startIcon={<LogoutIcon />} variant="outlined" onClick={logout}>{t('app.logout')}</Button>
+          </div>
         </Box>
       </Box>
     </div>
@@ -78,9 +94,9 @@ export function LayoutMui() {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {account?.name || 'Workspace'}
+            {account?.name || t('app.workspace')}
           </Typography>
-          <IconButton color="inherit" onClick={colorMode.toggle} sx={{ mr: 1 }} title="Toggle theme">
+          <IconButton color="inherit" onClick={colorMode.toggle} sx={{ mr: 1 }} title={t('app.toggle_theme')}>
             {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
           </IconButton>
         </Toolbar>
@@ -111,10 +127,12 @@ export function LayoutMui() {
   );
 }
 
-function NavItem({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
+function NavItem({ to, icon, label, baseLang }: { to: string; icon: React.ReactNode; label: string; baseLang?: string }) {
+  const lang = (baseLang || 'en').split('-')[0];
+  const target = `/${lang}${to}`;
   return (
     <ListItem disablePadding>
-      <NavLink to={to} end={to === '/'} style={{ width: '100%', textDecoration: 'none', color: 'inherit' }}>
+      <NavLink to={target} end={to === '/'} style={{ width: '100%', textDecoration: 'none', color: 'inherit' }}>
         {({ isActive }) => (
           <ListItemButton selected={isActive}>
             <ListItemIcon>{icon}</ListItemIcon>

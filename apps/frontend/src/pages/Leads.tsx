@@ -10,6 +10,7 @@ import { PaginationControls } from '../components/PaginationControls';
 import { SearchBar } from '../components/SearchBar';
 import { useQueryState } from '../hooks/useQueryState';
 import { CreateLeadDialog } from '../components/CreateLeadDialog';
+import { useTranslation } from 'react-i18next';
 
 export const Leads = () => {
   const { token } = useAuth();
@@ -27,6 +28,7 @@ export const Leads = () => {
   const [order, setOrder] = useQueryState('order', 'asc');
   const [status, setStatus] = useQueryState('status', '');
   const [q, setQ] = useQueryState('q', '');
+  const { t } = useTranslation();
 
   const load = async (targetPage = page) => {
     if (!token) return;
@@ -38,7 +40,7 @@ export const Leads = () => {
       setItems(leadsRes.data.leads);
       const p = (leadsRes.data as any).pagination; if (p) { setPages(p.pages); setPage(p.page); }
     } else {
-      toast.error('Failed to load');
+      toast.error(t('leads.delete_failed'));
     }
     if (pipesRes.ok && pipesRes.data) setPipelines(pipesRes.data.pipelines);
   };
@@ -58,11 +60,11 @@ export const Leads = () => {
     if (!token || !editing) return;
     const res = await api.leadsUpdate(token, editing.id, { email: editing.email });
     if (res.ok) {
-      toast.success('Lead updated');
+      toast.success(t('leads.updated'));
       setEditing(null);
       await load();
     } else {
-      toast.error('Update failed');
+      toast.error(t('leads.update_failed'));
     }
   };
 
@@ -71,36 +73,36 @@ export const Leads = () => {
     const res = await api.leadsDelete(token, deleting);
     setDeleting(null);
     if (res.ok) {
-      toast.success('Lead deleted');
+      toast.success(t('leads.deleted'));
       await load();
     } else {
-      toast.error('Delete failed');
+      toast.error(t('leads.delete_failed'));
     }
   };
 
-  const pipelineOptions = useMemo(() => [{ id: '', name: 'All Pipelines' }, ...pipelines], [pipelines]);
+  const pipelineOptions = useMemo(() => [{ id: '', name: t('leads.all_pipelines') }, ...pipelines], [pipelines, t]);
 
   return (
     <>
-      <Typography variant="h5" fontWeight={700} gutterBottom>Leads</Typography>
+      <Typography variant="h5" fontWeight={700} gutterBottom>{t('leads.title')}</Typography>
       <Card sx={{ mb: 2 }}>
         <CardContent sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <TextField select size="small" label="Pipeline" value={pipelineId as any} onChange={(e) => setPipelineId((e.target.value as any) || '')} sx={{ minWidth: 220 }}>
+          <TextField select size="small" label={t('leads.pipeline')} value={pipelineId as any} onChange={(e) => setPipelineId((e.target.value as any) || '')} sx={{ minWidth: 220 }}>
             {pipelineOptions.map((p) => <MenuItem key={p.id ?? 'all'} value={p.id}>{p.name}</MenuItem>)}
           </TextField>
-          <TextField select size="small" label="Status" value={status} onChange={(e) => setStatus(e.target.value)} sx={{ minWidth: 180 }}>
-            <MenuItem value="">All</MenuItem>
+          <TextField select size="small" label={t('leads.status')} value={status} onChange={(e) => setStatus(e.target.value)} sx={{ minWidth: 180 }}>
+            <MenuItem value="">{t('leads.all')}</MenuItem>
             {['new','researching','enriched','outreach','scheduled','responded','won','lost','archived'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
           </TextField>
-          <SearchBar value={q} onChange={setQ} placeholder="Search leads" />
-          <Button variant="contained" onClick={() => setCreateOpen(true)}>New Lead</Button>
-          <Button variant="outlined" onClick={async () => { if (!token) return; await api.apolloFetch(token, { keywords: q || 'saas', role: 'cto', location: 'US' }); toast.success('Apollo import started'); }}>Fetch via Apollo</Button>
+          <SearchBar value={q} onChange={setQ} placeholder={t('leads.search')} />
+          <Button variant="contained" onClick={() => setCreateOpen(true)}>{t('leads.new')}</Button>
+          <Button variant="outlined" onClick={async () => { if (!token) return; await api.apolloFetch(token, { keywords: q || 'saas', role: 'cto', location: 'US' }); toast.success(t('leads.apollo_started')); }}>{t('leads.fetch_apollo')}</Button>
         </CardContent>
       </Card>
       <Card sx={{ mb: 2 }}>
         <CardContent sx={{ display: 'flex', gap: 1 }}>
-          <TextField size="small" label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <Button variant="contained" disabled={loading || !pipelineId} onClick={create as any}>Create Lead</Button>
+          <TextField size="small" label={t('leads.email')} value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Button variant="contained" disabled={loading || !pipelineId} onClick={create as any}>{t('leads.create_lead')}</Button>
         </CardContent>
       </Card>
       <TableContainer component={Card}>
@@ -109,15 +111,15 @@ export const Leads = () => {
             <TableRow>
               <TableCell sortDirection={orderBy === 'email' ? (order as any) : false}>
                 <TableSortLabel active={orderBy === 'email'} direction={orderBy === 'email' ? (order as any) : 'asc'} onClick={() => setOrder(orderBy === 'email' && order === 'asc' ? 'desc' : 'asc') || setOrderBy('email')}>
-                  Email
+                  {t('leads.email')}
                 </TableSortLabel>
               </TableCell>
               <TableCell sortDirection={orderBy === 'status' ? (order as any) : false}>
                 <TableSortLabel active={orderBy === 'status'} direction={orderBy === 'status' ? (order as any) : 'asc'} onClick={() => setOrder(orderBy === 'status' && order === 'asc' ? 'desc' : 'asc') || setOrderBy('status')}>
-                  Status
+                  {t('leads.status')}
                 </TableSortLabel>
               </TableCell>
-              <TableCell>Actions</TableCell>
+              <TableCell>{t('common.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -134,7 +136,7 @@ export const Leads = () => {
                     onChange={async (e) => {
                       const next = e.target.value;
                       const res = await api.leadsUpdate(token!, l.id, { status: next });
-                      if (res.ok) { toast.success('Status updated'); await load(); } else { toast.error('Update failed'); }
+                      if (res.ok) { toast.success(t('leads.updated')); await load(); } else { toast.error(t('leads.update_failed')); }
                     }}
                   >
                     {['new','researching','enriched','outreach','scheduled','responded','won','lost','archived'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
@@ -151,20 +153,20 @@ export const Leads = () => {
       </TableContainer>
       <PaginationControls page={page} pages={pages} onPageChange={(p) => load(p)} disabled={loading} />
       <Dialog open={!!editing} onClose={() => setEditing(null)}>
-        <DialogTitle>Edit Lead</DialogTitle>
+        <DialogTitle>{t('leads.edit_title')}</DialogTitle>
         <DialogContent>
-          <TextField autoFocus margin="dense" fullWidth label="Email" value={editing?.email || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, email: e.target.value } : prev)} />
+          <TextField autoFocus margin="dense" fullWidth label={t('leads.email')} value={editing?.email || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, email: e.target.value } : prev)} />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditing(null)}>Cancel</Button>
-          <Button onClick={submitEdit} variant="contained">Save</Button>
+          <Button onClick={() => setEditing(null)}>{t('common.cancel')}</Button>
+          <Button onClick={submitEdit} variant="contained">{t('common.save')}</Button>
         </DialogActions>
       </Dialog>
 
       <ConfirmDialog
         open={deleting != null}
-        title="Delete lead?"
-        message="This cannot be undone."
+        title={t('leads.delete_title')}
+        message={t('leads.delete_msg')}
         onClose={() => setDeleting(null)}
         onConfirm={confirmDelete}
       />

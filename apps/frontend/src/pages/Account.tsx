@@ -1,11 +1,13 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
+import { useTranslation } from 'react-i18next';
 
 export const Account = () => {
   const { token, account, reload } = useAuth();
   const [name, setName] = useState(account?.name || '');
   const [saving, setSaving] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => { setName(account?.name || ''); }, [account]);
 
@@ -20,10 +22,10 @@ export const Account = () => {
 
   return (
     <div className="space-y-4">
-      <h1 className="page-title">Account</h1>
+      <h1 className="page-title">{t('account.title')}</h1>
       <form onSubmit={onSubmit} className="card p-4 flex items-center gap-3 max-w-lg">
         <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
-        <button className="btn btn-primary" disabled={saving} type="submit">Save</button>
+        <button className="btn btn-primary" disabled={saving} type="submit">{t('common.save')}</button>
       </form>
     </div>
   );

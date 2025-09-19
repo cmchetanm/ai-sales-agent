@@ -3,6 +3,7 @@ import { Card, CardContent, IconButton, Stack, TextField, Typography } from '@mu
 import SendIcon from '@mui/icons-material/Send';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
+import { useTranslation } from 'react-i18next';
 
 type ChatMsg = { id?: number; role: 'user' | 'assistant'; content: string; sent_at?: string };
 
@@ -13,6 +14,7 @@ export const AgentChat = () => {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -40,7 +42,7 @@ export const AgentChat = () => {
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h5" fontWeight={700}>Agent Chat</Typography>
+      <Typography variant="h5" fontWeight={700}>{t('chat.title')}</Typography>
       <Card>
         <CardContent>
           <div style={{ maxHeight: 480, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -56,10 +58,9 @@ export const AgentChat = () => {
         </CardContent>
       </Card>
       <Stack direction="row" spacing={1}>
-        <TextField fullWidth size="small" placeholder="Ask the agent..." value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') send(); }} />
+        <TextField fullWidth size="small" placeholder={t('chat.placeholder')} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') send(); }} />
         <IconButton color="primary" onClick={send} disabled={sending || !input.trim()}><SendIcon /></IconButton>
       </Stack>
     </Stack>
   );
 };
-

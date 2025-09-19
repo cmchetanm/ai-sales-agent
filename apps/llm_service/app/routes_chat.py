@@ -1,8 +1,9 @@
 import os
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from .schemas import ChatRequest, ChatResponse
 from typing import List, Dict
 import httpx
+from .i18n import normalize_locale, t
 
 USE_OPENAI = bool(os.getenv("OPENAI_API_KEY"))
 llm = None
@@ -18,14 +19,11 @@ if USE_OPENAI:
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 
-SYSTEM_PROMPT = (
-    "You are an AI sales prospecting assistant. "
-    "Help the user find leads by asking concise, targeted questions about their ideal customer profile (industry, role, geography, company size, keywords). "
-    "When enough information is available, acknowledge and proceed. Keep responses under 120 words."
-)
+def system_prompt(locale: str) -> str:
+    return t('system_prompt', locale)
 
 
-def _generate_reply(messages: List[Dict]) -> str:
+def _generate_reply(messages: List[Dict], locale: str) -> str:
     if llm is not None:
         # Map to LangChain messages
         from langchain.schema import HumanMessage, SystemMessage, AIMessage
@@ -40,19 +38,19 @@ def _generate_reply(messages: List[Dict]) -> str:
         lc_messages = [to_lc(m) for m in messages]
         try:
             result = llm.invoke(lc_messages)
-            return getattr(result, "content", "Let’s continue. What roles and locations should I target?")
+            return getattr(result, "content", t('ask_missing', locale))
         except Exception:
             pass
     # If OpenAI is configured, you could swap in LangChain/OpenAI here.
     # To keep this service portable, reply with a lightweight heuristic.
     last_user = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
     if not last_user:
-        return "Hi! What industry, roles, and locations should I target for your leads?"
+        return t('ask_start', locale)
     # Very simple branching to simulate helpfulness
     lower = last_user.lower()
     if any(k in lower for k in ["industry", "role", "location", "geo", "size", "company"]):
-        return "Great, noted. Any specific keywords or technologies I should filter for?"
-    return "Got it. Could you share industry, target roles, and geography to start?"
+        return t('ask_keywords', locale)
+    return t('ask_missing', locale)
 
 
 def _extract_filters(text: str) -> Dict[str, str]:
@@ -77,9 +75,10 @@ def _post_internal(path: str, payload: Dict) -> bool:
 
 
 @router.post("/messages", response_model=ChatResponse)
-async def chat_messages(req: ChatRequest) -> ChatResponse:
-    context = [{"role": "system", "content": SYSTEM_PROMPT}] + [m.model_dump() for m in req.messages]
-    reply = _generate_reply(context)
+async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
+    locale = normalize_locale(request.headers.get('accept-language'))
+    context = [{"role": "system", "content": system_prompt(locale)}] + [m.model_dump() for m in req.messages]
+    reply = _generate_reply(context, locale)
     # Heuristic tool use: if user provided targeting details, persist and trigger fetch
     last_user = next((m.content for m in req.messages[::-1] if m.role == 'user'), "")
     if last_user:
@@ -94,8 +93,5 @@ async def chat_messages(req: ChatRequest) -> ChatResponse:
                 "/api/v1/internal/apollo_fetch",
                 {"account_id": req.account_id, "filters": filters},
             )
-            reply = (
-                "Thanks — I saved your preferences and started fetching leads. "
-                "You can refine industry, roles, or geography to improve results."
-            )
+            reply = t('saved_and_fetching', locale)
     return ChatResponse(reply=reply, session_id=req.session_id)

@@ -14,11 +14,15 @@ export interface ApiResponse<T> {
   error?: any;
 }
 
+import i18n from '../i18n';
+
 export async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<ApiResponse<T>> {
   const headers: Record<string, string> = {
     Accept: 'application/json',
     ...(options.headers as Record<string, string> | undefined),
   };
+  // Propagate user locale to backend
+  try { headers['Accept-Language'] = (i18n?.language || 'en').split('-')[0]; } catch {}
   if (options.body && !(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }

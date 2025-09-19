@@ -10,6 +10,7 @@ import { PaginationControls } from '../components/PaginationControls';
 import { SearchBar } from '../components/SearchBar';
 import { useQueryState } from '../hooks/useQueryState';
 import { CreatePipelineDialog } from '../components/CreatePipelineDialog';
+import { useTranslation } from 'react-i18next';
 
 export const Pipelines = () => {
   const { token } = useAuth();
@@ -24,6 +25,7 @@ export const Pipelines = () => {
   const [orderBy, setOrderBy] = useQueryState('orderBy', 'name');
   const [order, setOrder] = useQueryState('order', 'asc');
   const [q, setQ] = useQueryState('q', '');
+  const { t } = useTranslation();
 
   const load = async (targetPage = page) => {
     if (!token) return;
@@ -33,7 +35,7 @@ export const Pipelines = () => {
       const p = (res.data as any).pagination;
       if (p) { setPages(p.pages); setPage(p.page); }
     } else {
-      toast.error('Failed to load');
+      toast.error(t('pipelines.delete_failed'));
     }
   };
 
@@ -52,11 +54,11 @@ export const Pipelines = () => {
     if (!token || !editing) return;
     const res = await api.pipelinesUpdate(token, editing.id, { name: editing.name });
     if (res.ok) {
-      toast.success('Pipeline updated');
+      toast.success(t('pipelines.updated'));
       setEditing(null);
       await load();
     } else {
-      toast.error('Update failed');
+      toast.error(t('pipelines.update_failed'));
     }
   };
 
@@ -65,20 +67,20 @@ export const Pipelines = () => {
     const res = await api.pipelinesDelete(token, deleting);
     setDeleting(null);
     if (res.ok) {
-      toast.success('Pipeline deleted');
+      toast.success(t('pipelines.deleted'));
       await load();
     } else {
-      toast.error('Delete failed');
+      toast.error(t('pipelines.delete_failed'));
     }
   };
 
   return (
     <>
-      <Typography variant="h5" fontWeight={700} gutterBottom>Pipelines</Typography>
+      <Typography variant="h5" fontWeight={700} gutterBottom>{t('pipelines.title')}</Typography>
       <Card sx={{ mb: 2 }}>
         <CardContent sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <Button variant="contained" onClick={() => setCreateOpen(true)}>New Pipeline</Button>
-          <SearchBar value={q} onChange={setQ} placeholder="Search pipelines" />
+          <Button variant="contained" onClick={() => setCreateOpen(true)}>{t('pipelines.new')}</Button>
+          <SearchBar value={q} onChange={setQ} placeholder={t('pipelines.search')} />
         </CardContent>
       </Card>
       <TableContainer component={Card}>
@@ -87,15 +89,15 @@ export const Pipelines = () => {
             <TableRow>
               <TableCell sortDirection={orderBy === 'name' ? (order as any) : false}>
                 <TableSortLabel active={orderBy === 'name'} direction={orderBy === 'name' ? (order as any) : 'asc'} onClick={() => setOrder(orderBy === 'name' && order === 'asc' ? 'desc' : 'asc') || setOrderBy('name')}>
-                  Name
+                  {t('common.name')}
                 </TableSortLabel>
               </TableCell>
               <TableCell sortDirection={orderBy === 'status' ? (order as any) : false}>
                 <TableSortLabel active={orderBy === 'status'} direction={orderBy === 'status' ? (order as any) : 'asc'} onClick={() => setOrder(orderBy === 'status' && order === 'asc' ? 'desc' : 'asc') || setOrderBy('status')}>
-                  Status
+                  {t('common.status')}
                 </TableSortLabel>
               </TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell align="right">{t('common.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -120,20 +122,20 @@ export const Pipelines = () => {
       <PaginationControls page={page} pages={pages} onPageChange={(p) => load(p)} disabled={loading} />
 
       <Dialog open={!!editing} onClose={() => setEditing(null)}>
-        <DialogTitle>Edit Pipeline</DialogTitle>
+        <DialogTitle>{t('pipelines.edit_title')}</DialogTitle>
         <DialogContent>
-          <TextField autoFocus margin="dense" fullWidth label="Name" value={editing?.name || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, name: e.target.value } : prev)} />
+          <TextField autoFocus margin="dense" fullWidth label={t('common.name')} value={editing?.name || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, name: e.target.value } : prev)} />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditing(null)}>Cancel</Button>
-          <Button onClick={submitEdit} variant="contained">Save</Button>
+          <Button onClick={() => setEditing(null)}>{t('common.cancel')}</Button>
+          <Button onClick={submitEdit} variant="contained">{t('common.save')}</Button>
         </DialogActions>
       </Dialog>
 
       <ConfirmDialog
         open={deleting != null}
-        title="Delete pipeline?"
-        message="This cannot be undone."
+        title={t('pipelines.delete_title')}
+        message={t('pipelines.delete_msg')}
         onClose={() => setDeleting(null)}
         onConfirm={confirmDelete}
       />

@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Box, Button, Card, CardContent, Stack, TextField, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 export const Login = () => {
   const { signIn } = useAuth();
@@ -10,6 +11,7 @@ export const Login = () => {
   const [password, setPassword] = useState('DemoPass123!');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { t, i18n } = useTranslation();
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -17,8 +19,8 @@ export const Login = () => {
     setError(null);
     const ok = await signIn(email, password);
     setLoading(false);
-    if (ok) navigate('/');
-    else setError('Invalid email or password');
+    if (ok) navigate(`/${i18n.language.split('-')[0]}/`);
+    else setError(t('login.error'));
   };
 
   return (
@@ -26,12 +28,12 @@ export const Login = () => {
       <Card sx={{ width: 420 }}>
         <CardContent>
           <Stack component="form" onSubmit={onSubmit} spacing={2}>
-            <Typography variant="h5" fontWeight={700}>Sign in</Typography>
+            <Typography variant="h5" fontWeight={700}>{t('login.title')}</Typography>
             {error && <Typography color="error" variant="body2">{error}</Typography>}
-            <TextField label="Email" value={email} onChange={(e) => setEmail(e.target.value)} fullWidth size="small" />
-            <TextField label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} fullWidth size="small" />
-            <Button variant="contained" type="submit" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</Button>
-            <Typography variant="body2" color="text.secondary">No account? <Link to="/signup">Create one</Link></Typography>
+            <TextField label={t('login.email')} value={email} onChange={(e) => setEmail(e.target.value)} fullWidth size="small" />
+            <TextField label={t('login.password')} type="password" value={password} onChange={(e) => setPassword(e.target.value)} fullWidth size="small" />
+            <Button variant="contained" type="submit" disabled={loading}>{loading ? t('login.submitting') : t('login.submit')}</Button>
+            <Typography variant="body2" color="text.secondary">{t('login.footer', { link: '' })}<Link to="/signup">{t('login.create_one')}</Link></Typography>
           </Stack>
         </CardContent>
       </Card>

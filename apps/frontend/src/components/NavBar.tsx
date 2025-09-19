@@ -1,9 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export const NavBar = () => {
   const { user, account, signOut } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const logout = async () => {
     await signOut();
@@ -13,17 +15,17 @@ export const NavBar = () => {
   return (
     <header style={styles.header}>
       <div style={styles.left}>
-        <Link to="/" style={styles.brand}>AI Sales Agent</Link>
+        <Link to="/" style={styles.brand}>{t('app.title')}</Link>
         <nav style={styles.nav}>
-          <Link to="/pipelines" style={styles.link}>Pipelines</Link>
-          <Link to="/leads" style={styles.link}>Leads</Link>
-          <Link to="/campaigns" style={styles.link}>Campaigns</Link>
-          <Link to="/account" style={styles.link}>Account</Link>
+          <Link to="/pipelines" style={styles.link}>{t('nav.pipelines')}</Link>
+          <Link to="/leads" style={styles.link}>{t('nav.leads')}</Link>
+          <Link to="/campaigns" style={styles.link}>{t('nav.campaigns')}</Link>
+          <Link to="/account" style={styles.link}>{t('nav.account')}</Link>
         </nav>
       </div>
       <div style={styles.right}>
         {account && <span style={styles.account}>{account.name}</span>}
-        {user && <button onClick={logout} style={styles.button}>Logout</button>}
+        {user && <button onClick={logout} style={styles.button}>{t('app.logout')}</button>}
       </div>
     </header>
   );
@@ -39,4 +41,3 @@ const styles: Record<string, any> = {
   account: { fontSize: 12, opacity: 0.8 },
   button: { background: '#1f2937', color: '#e5e7eb', border: '1px solid #374151', padding: '0.35rem 0.75rem', borderRadius: 6 }
 };
-

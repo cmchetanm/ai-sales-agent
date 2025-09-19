@@ -1,0 +1,7 @@
+es:
+  hello: "Hola mundo"
+  errors:
+    not_authorized: "No autorizado"
+    not_found: "No encontrado"
+    bad_request: "Solicitud incorrecta"
+

@@ -1,0 +1,7 @@
+fr:
+  hello: "Bonjour le monde"
+  errors:
+    not_authorized: "Non autorisé"
+    not_found: "Non trouvé"
+    bad_request: "Requête invalide"
+
