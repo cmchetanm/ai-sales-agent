@@ -39,7 +39,16 @@ function buildTheme(mode: ThemeMode) {
       MuiTextField: { defaultProps: { size: 'small' } },
       MuiTable: { defaultProps: { size: 'small' } },
       MuiTableCell: { styleOverrides: { root: { paddingTop: 8, paddingBottom: 8 } } },
-      MuiAppBar: { defaultProps: { elevation: 0, color: 'default' } },
+      MuiAppBar: {
+        defaultProps: { elevation: 0, color: 'default' },
+        styleOverrides: {
+          root: {
+            backdropFilter: 'saturate(180%) blur(8px)',
+            backgroundColor: isDark ? 'rgba(15,23,42,0.7)' : 'rgba(255,255,255,0.7)',
+            borderBottom: isDark ? '1px solid rgba(148,163,184,0.12)' : '1px solid rgba(0,0,0,0.06)'
+          }
+        }
+      },
       MuiToolbar: { styleOverrides: { root: { minHeight: 56 } } },
       MuiPaper: {
         styleOverrides: {

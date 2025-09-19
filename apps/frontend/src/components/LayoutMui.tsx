@@ -55,12 +55,15 @@ export function LayoutMui() {
     <div>
       <Toolbar>
         <Box>
-          <Typography variant="h6" fontWeight={700}>{t('app.title')}</Typography>
+          <Typography variant="h6" fontWeight={800} sx={{ letterSpacing: 0.3 }}>{t('app.title')}</Typography>
           <Typography variant="caption" color="text.secondary">{account?.name}</Typography>
         </Box>
       </Toolbar>
       <Divider />
-      <List>
+      <List sx={{
+        '& .MuiListItemButton-root': { borderRadius: 1, mx: 1, my: 0.5 },
+        '& .Mui-selected': { background: 'linear-gradient(90deg, rgba(99,102,241,0.15), transparent)' }
+      }}>
         <NavItem baseLang={lang} to="/" icon={<DashboardIcon />} label={t('nav.dashboard')} />
         <NavItem baseLang={lang} to="/pipelines" icon={<LanOutlinedIcon />} label={t('nav.pipelines')} />
         <NavItem baseLang={lang} to="/chat" icon={<ChatBubbleOutlineIcon />} label={t('nav.chat')} />
@@ -107,19 +110,19 @@ export function LayoutMui() {
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
-          sx={{ display: { xs: 'block', sm: 'none' }, '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth } }}
+          sx={{ display: { xs: 'block', sm: 'none' }, '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(180deg, #0f172a 0%, #0b1220 100%)' : undefined } }}
         >
           {drawer}
         </Drawer>
         <Drawer
           variant="permanent"
-          sx={{ display: { xs: 'none', sm: 'block' }, '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth } }}
+          sx={{ display: { xs: 'none', sm: 'block' }, '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, background: (t) => t.palette.mode === 'dark' ? 'linear-gradient(180deg, #0f172a 0%, #0b1220 100%)' : undefined, borderRight: (t) => `1px solid ${t.palette.divider}` } }}
           open
         >
           {drawer}
         </Drawer>
       </Box>
-      <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` }, position: 'relative' }}>
         <Toolbar />
         <Outlet />
       </Box>

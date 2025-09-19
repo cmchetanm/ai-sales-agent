@@ -4,9 +4,14 @@ module Api
   module V1
     class CampaignsController < Api::BaseController
       def index
-        scope = policy_scope(current_account.campaigns).order(created_at: :desc)
+        scope = policy_scope(current_account.campaigns)
         scope = scope.where(pipeline_id: params[:pipeline_id]) if params[:pipeline_id].present?
         scope = scope.where(status: params[:status]) if params[:status].present?
+        if params[:q].present?
+          q = "%#{params[:q].to_s.downcase}%"
+          scope = scope.where('LOWER(name) LIKE :q', q:)
+        end
+        scope = apply_sort(scope)
 
         @pagy, records = pagy(scope, items: per_page)
         render json: {
@@ -76,6 +81,17 @@ module Api
           schedule: {},
           metrics: {}
         )
+      end
+
+      def apply_sort(scope)
+        order_by = params[:order_by].presence || 'created_at'
+        direction = params[:order].to_s.downcase == 'asc' ? :asc : :desc
+        allowed = %w[name status created_at updated_at]
+        if allowed.include?(order_by)
+          scope.reorder(order_by => direction)
+        else
+          scope.order(created_at: :desc)
+        end
       end
     end
   end

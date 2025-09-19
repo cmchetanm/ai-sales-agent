@@ -11,6 +11,7 @@ import { SearchBar } from '../components/SearchBar';
 import { useQueryState } from '../hooks/useQueryState';
 import { CreateCampaignDialog } from '../components/CreateCampaignDialog';
 import { useTranslation } from 'react-i18next';
+import { StatusChip } from '../components/StatusChip';
 
 export const Campaigns = () => {
   const { token } = useAuth();
@@ -33,7 +34,7 @@ export const Campaigns = () => {
   const load = async (targetPage = page) => {
     if (!token) return;
     const [cRes, pRes] = await Promise.all([
-      api.campaignsIndex(token, { per_page: 10, page: targetPage }),
+      api.campaignsIndex(token, { per_page: 10, page: targetPage, q, status: status || undefined, order_by: orderBy, order }),
       api.pipelinesIndex(token, { per_page: 50 })
     ]);
     if (cRes.ok && cRes.data) {
@@ -124,6 +125,7 @@ export const Campaigns = () => {
               <TableRow key={c.id} hover>
                 <TableCell>{c.name}</TableCell>
                 <TableCell>
+                  <StatusChip value={c.status} />
                   <TextField
                     select size="small" value={c.status}
                     onChange={async (e) => {

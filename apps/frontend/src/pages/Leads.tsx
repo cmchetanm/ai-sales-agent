@@ -33,7 +33,7 @@ export const Leads = () => {
   const load = async (targetPage = page) => {
     if (!token) return;
     const [leadsRes, pipesRes] = await Promise.all([
-      api.leadsIndex(token, { per_page: 10, page: targetPage, pipeline_id: pipelineId || undefined }),
+      api.leadsIndex(token, { per_page: 10, page: targetPage, pipeline_id: pipelineId || undefined, status: status || undefined, q, order_by: orderBy, order }),
       api.pipelinesIndex(token, { per_page: 50 })
     ]);
     if (leadsRes.ok && leadsRes.data) {

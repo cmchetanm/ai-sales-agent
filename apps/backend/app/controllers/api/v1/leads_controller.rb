@@ -4,9 +4,9 @@ module Api
   module V1
     class LeadsController < Api::BaseController
       def index
-        scope = policy_scope(current_account.leads).order(created_at: :desc)
-        scope = scope.where(pipeline_id: params[:pipeline_id]) if params[:pipeline_id].present?
-        scope = scope.where(status: params[:status]) if params[:status].present?
+        scope = policy_scope(current_account.leads)
+        scope = apply_filters(scope)
+        scope = apply_sort(scope)
 
         @pagy, records = pagy(scope, items: per_page)
         render json: {
@@ -86,6 +86,30 @@ module Api
           :last_contacted_at,
           enrichment: {}
         )
+      end
+
+      def apply_filters(scope)
+        scope = scope.where(pipeline_id: params[:pipeline_id]) if params[:pipeline_id].present?
+        scope = scope.where(status: params[:status]) if params[:status].present?
+        if params[:q].present?
+          q = "%#{params[:q].to_s.downcase}%"
+          scope = scope.where(
+            'LOWER(email) LIKE :q OR LOWER(company) LIKE :q OR LOWER(first_name) LIKE :q OR LOWER(last_name) LIKE :q',
+            q:
+          )
+        end
+        scope
+      end
+
+      def apply_sort(scope)
+        order_by = params[:order_by].presence || 'created_at'
+        direction = params[:order].to_s.downcase == 'asc' ? :asc : :desc
+        allowed = %w[email status created_at updated_at company score]
+        if allowed.include?(order_by)
+          scope.reorder(order_by => direction)
+        else
+          scope.order(created_at: :desc)
+        end
       end
     end
   end

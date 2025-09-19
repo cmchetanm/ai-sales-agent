@@ -4,7 +4,12 @@ module Api
   module V1
     class PipelinesController < Api::BaseController
       def index
-        scope = policy_scope(current_account.pipelines).order(:created_at)
+        scope = policy_scope(current_account.pipelines)
+        if params[:q].present?
+          q = "%#{params[:q].to_s.downcase}%"
+          scope = scope.where('LOWER(name) LIKE :q OR LOWER(status) LIKE :q', q:)
+        end
+        scope = apply_sort(scope)
         @pagy, records = pagy(scope, items: per_page)
         render json: {
           pipelines: records.map { |p| PipelineSerializer.new(p).serializable_hash },
@@ -57,6 +62,17 @@ module Api
 
       def pagy_meta(p)
         { page: p.page, items: p.items, count: p.count, pages: p.pages }
+      end
+
+      def apply_sort(scope)
+        order_by = params[:order_by].presence || 'created_at'
+        direction = params[:order].to_s.downcase == 'desc' ? :desc : :asc
+        allowed = %w[name status created_at updated_at]
+        if allowed.include?(order_by)
+          scope.reorder(order_by => direction)
+        else
+          scope.order(:created_at)
+        end
       end
     end
   end

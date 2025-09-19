@@ -11,6 +11,7 @@ import { SearchBar } from '../components/SearchBar';
 import { useQueryState } from '../hooks/useQueryState';
 import { CreatePipelineDialog } from '../components/CreatePipelineDialog';
 import { useTranslation } from 'react-i18next';
+import { StatusChip } from '../components/StatusChip';
 
 export const Pipelines = () => {
   const { token } = useAuth();
@@ -29,7 +30,7 @@ export const Pipelines = () => {
 
   const load = async (targetPage = page) => {
     if (!token) return;
-    const res = await api.pipelinesIndex(token, { per_page: 10, page: targetPage });
+    const res = await api.pipelinesIndex(token, { per_page: 10, page: targetPage, q, order_by: orderBy, order });
     if (res.ok && res.data) {
       setItems(res.data.pipelines);
       const p = (res.data as any).pagination;
@@ -109,7 +110,7 @@ export const Pipelines = () => {
             .map((p) => (
               <TableRow key={p.id} hover>
                 <TableCell>{p.name}</TableCell>
-                <TableCell>{p.status}</TableCell>
+                <TableCell><StatusChip value={p.status} /></TableCell>
                 <TableCell align="right">
                   <IconButton size="small" aria-label="edit" onClick={() => setEditing({ id: p.id, name: p.name })}><EditIcon fontSize="small" /></IconButton>
                   <IconButton size="small" aria-label="delete" onClick={() => setDeleting(p.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
