@@ -15,6 +15,7 @@ import {
   Toolbar,
   Typography,
   Button,
+  Stack,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -33,6 +34,8 @@ import { useTranslation } from 'react-i18next';
 import { MenuItem, Select } from '@mui/material';
 import { useLocation, useParams } from 'react-router-dom';
 import { api } from '../api/client';
+import { Aurora } from './Aurora';
+import { TopBarProgress } from './TopBarProgress';
 
 const drawerWidth = 260;
 
@@ -75,14 +78,29 @@ export function LayoutMui() {
         <Divider sx={{ mb: 1 }} />
         <Box display="flex" alignItems="center" gap={1} justifyContent="space-between">
           <Typography variant="caption" color="text.secondary" noWrap>{user?.email}</Typography>
-          <div>
-            <Select size="small" value={lang} onChange={async (e) => { const l = e.target.value as string; setLang(l); i18n.changeLanguage(l); const parts = location.pathname.split('/'); if (parts[1]) { parts[1] = l; } else { parts.splice(1, 0, l); } navigate(parts.join('/')); try { if (token) { const currentQ = (account as any)?.profile?.questionnaire || {}; await api.accountUpdate(token, { profile_attributes: { questionnaire: { ...currentQ, locale: l } } }); } } catch {} }} sx={{ mr: 1 }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Select
+              size="small"
+              value={lang}
+              onChange={async (e) => { const l = e.target.value as string; setLang(l); i18n.changeLanguage(l); const parts = location.pathname.split('/'); if (parts[1]) { parts[1] = l; } else { parts.splice(1, 0, l); } navigate(parts.join('/')); try { if (token) { const currentQ = (account as any)?.profile?.questionnaire || {}; await api.accountUpdate(token, { profile_attributes: { questionnaire: { ...currentQ, locale: l } } }); } } catch {} }}
+              variant="outlined"
+              displayEmpty
+              sx={{
+                minWidth: 72,
+                height: 32,
+                borderRadius: 2,
+                '& .MuiSelect-select': { py: 0.5, px: 1.5, display: 'flex', alignItems: 'center' },
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: (t) => t.palette.divider },
+              }}
+            >
               <MenuItem value="en">EN</MenuItem>
               <MenuItem value="es">ES</MenuItem>
               <MenuItem value="fr">FR</MenuItem>
             </Select>
-            <Button size="small" startIcon={<LogoutIcon />} variant="outlined" onClick={logout}>{t('app.logout')}</Button>
-          </div>
+            <Button size="small" startIcon={<LogoutIcon />} variant="outlined" onClick={logout} sx={{ height: 32 }}>
+              {t('app.logout')}
+            </Button>
+          </Stack>
         </Box>
       </Box>
     </div>
@@ -122,8 +140,10 @@ export function LayoutMui() {
           {drawer}
         </Drawer>
       </Box>
-      <Box component="main" sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` }, position: 'relative' }}>
+      <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, sm: 3 }, width: { sm: `calc(100% - ${drawerWidth}px)` }, position: 'relative', overflow: 'hidden' }}>
+        <TopBarProgress />
         <Toolbar />
+        <Aurora />
         <Outlet />
       </Box>
     </Box>

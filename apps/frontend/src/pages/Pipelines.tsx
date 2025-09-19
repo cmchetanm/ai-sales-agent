@@ -12,11 +12,14 @@ import { useQueryState } from '../hooks/useQueryState';
 import { CreatePipelineDialog } from '../components/CreatePipelineDialog';
 import { useTranslation } from 'react-i18next';
 import { StatusChip } from '../components/StatusChip';
+import { TableSkeletonRows } from '../components/TableSkeleton';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
 
 export const Pipelines = () => {
   const { token } = useAuth();
   const [items, setItems] = useState<any[]>([]);
   const [name, setName] = useState('New Pipeline');
+  const [loadingList, setLoadingList] = useState(true);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<{ id: number; name: string } | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
@@ -30,6 +33,7 @@ export const Pipelines = () => {
 
   const load = async (targetPage = page) => {
     if (!token) return;
+    setLoadingList(true);
     const res = await api.pipelinesIndex(token, { per_page: 10, page: targetPage, q, order_by: orderBy, order });
     if (res.ok && res.data) {
       setItems(res.data.pipelines);
@@ -38,6 +42,7 @@ export const Pipelines = () => {
     } else {
       toast.error(t('pipelines.delete_failed'));
     }
+  setLoadingList(false);
   };
 
   useEffect(() => { load(page || 1); }, [token]);
@@ -78,13 +83,13 @@ export const Pipelines = () => {
   return (
     <>
       <Typography variant="h5" fontWeight={700} gutterBottom>{t('pipelines.title')}</Typography>
-      <Card sx={{ mb: 2 }}>
+      <Card className="glass fade-in" sx={{ mb: 2 }}>
         <CardContent sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <Button variant="contained" onClick={() => setCreateOpen(true)}>{t('pipelines.new')}</Button>
+          <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setCreateOpen(true)}>{t('pipelines.new')}</Button>
           <SearchBar value={q} onChange={setQ} placeholder={t('pipelines.search')} />
         </CardContent>
       </Card>
-      <TableContainer component={Card}>
+      <TableContainer component={Card} className="glass slide-up" sx={{ position: 'relative' }}>
         <Table size="small">
           <TableHead>
             <TableRow>
@@ -102,7 +107,7 @@ export const Pipelines = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {[...items]
+            {loadingList ? <TableSkeletonRows rows={5} cols={3} /> : [...items]
               .filter((p) => !q || p.name?.toLowerCase().includes(q.toLowerCase()))
               .sort((a:any,b:any)=>{
               const key = orderBy; const o = order === 'asc' ? 1 : -1; if(a[key]<b[key]) return -1*o; if(a[key]>b[key]) return 1*o; return 0;

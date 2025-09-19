@@ -90,7 +90,7 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
         )
         if any(filters.values()):
             _post_internal(
-                "/api/v1/internal/apollo_fetch",
+                "/api/v1/internal/discover_leads",
                 {"account_id": req.account_id, "filters": filters},
             )
             reply = t('saved_and_fetching', locale)

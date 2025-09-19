@@ -12,14 +12,20 @@ module Api
           render json: { status: 'ok' }
         end
 
-        def apollo_fetch
-          account = Account.find(params.require(:account_id))
-          filters = params.require(:filters).permit(:keywords, :role, :location).to_h.symbolize_keys
-          ApolloFetchJob.perform_later(account_id: account.id, filters:)
-          render json: { status: 'queued' }, status: :accepted
-        end
+      def apollo_fetch
+        account = Account.find(params.require(:account_id))
+        filters = params.require(:filters).permit(:keywords, :role, :location).to_h.symbolize_keys
+        ApolloFetchJob.perform_later(account_id: account.id, filters:)
+        render json: { status: 'queued' }, status: :accepted
+      end
+
+      def discover_leads
+        account = Account.find(params.require(:account_id))
+        filters = params.require(:filters).permit(:keywords, :role, :location).to_h.symbolize_keys
+        LeadDiscoveryJob.perform_later(account_id: account.id, filters:)
+        render json: { status: 'queued' }, status: :accepted
+      end
       end
     end
   end
 end
-

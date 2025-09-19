@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
-import { Card, CardContent, Grid2 as Grid, Typography } from '@mui/material';
+import { Card, CardContent, Grid2 as Grid, Typography, Box } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import PeopleOutlineIcon from '@mui/icons-material/PeopleOutline';
+import MailOutlineIcon from '@mui/icons-material/MailOutline';
+import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 
 export const Dashboard = () => {
   const { token, user, account } = useAuth();
@@ -20,30 +24,61 @@ export const Dashboard = () => {
 
   return (
     <>
-      <Typography variant="h5" fontWeight={700} gutterBottom>{t('dashboard.title')}</Typography>
+      <Typography variant="h5" fontWeight={800} gutterBottom>{t('dashboard.title')}</Typography>
       <Typography variant="body2" color="text.secondary" gutterBottom>
         {t('dashboard.subtitle')}
       </Typography>
       <Grid container spacing={2} sx={{ mt: 1 }}>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Card><CardContent>
-            <Typography variant="caption" color="text.secondary">{t('dashboard.backend')}</Typography>
-            <Typography variant="h5" fontWeight={700} textTransform="capitalize">{health}</Typography>
-          </CardContent></Card>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <StatCard icon={<PeopleOutlineIcon />} title="Leads" value="1,248" change="+12%" gradient="linear-gradient(135deg,#22d3ee80,#6366f180)" />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Card><CardContent>
-            <Typography variant="caption" color="text.secondary">{t('dashboard.user')}</Typography>
-            <Typography variant="h5" fontWeight={700}>{user?.email}</Typography>
-          </CardContent></Card>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <StatCard icon={<MailOutlineIcon />} title="Emails" value="8,931" change="+5%" gradient="linear-gradient(135deg,#f472b680,#22d3ee80)" />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Card><CardContent>
-            <Typography variant="caption" color="text.secondary">{t('dashboard.account')}</Typography>
-            <Typography variant="h5" fontWeight={700}>{account?.name}</Typography>
-          </CardContent></Card>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <StatCard icon={<LanOutlinedIcon />} title="Pipelines" value="3" change="Stable" gradient="linear-gradient(135deg,#6366f180,#22d3ee80)" />
+        </Grid>
+        <Grid size={{ xs: 12, md: 3 }}>
+          <StatCard icon={<TrendingUpIcon />} title="Reply Rate" value="18.4%" change="+1.2%" gradient="linear-gradient(135deg,#22d3ee80,#f472b680)" />
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={2} sx={{ mt: 1 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card className="glass">
+            <CardContent>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>System</Typography>
+              <Typography variant="h5" fontWeight={700} textTransform="capitalize">{t('dashboard.backend')}: {health}</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Card className="glass">
+            <CardContent>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>{t('dashboard.account')}</Typography>
+              <Typography variant="h5" fontWeight={700}>{account?.name}</Typography>
+              <Typography variant="body2" color="text.secondary">{t('dashboard.user')}: {user?.email}</Typography>
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
     </>
   );
 };
+
+function StatCard({ icon, title, value, change, gradient }: { icon: React.ReactNode; title: string; value: string; change: string; gradient: string; }) {
+  return (
+    <Card className="glass">
+      <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ width: 42, height: 42, borderRadius: 2, display: 'grid', placeItems: 'center', color: 'white', background: gradient }}>
+          {icon}
+        </Box>
+        <Box sx={{ ml: 1 }}>
+          <Typography variant="caption" color="text.secondary">{title}</Typography>
+          <Typography variant="h5" fontWeight={800}>{value}</Typography>
+          <Typography variant="caption" color="success.main">{change}</Typography>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}

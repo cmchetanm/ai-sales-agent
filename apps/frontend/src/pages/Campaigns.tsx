@@ -12,6 +12,9 @@ import { useQueryState } from '../hooks/useQueryState';
 import { CreateCampaignDialog } from '../components/CreateCampaignDialog';
 import { useTranslation } from 'react-i18next';
 import { StatusChip } from '../components/StatusChip';
+import { StatusSelectChip } from '../components/StatusSelectChip';
+import { TableSkeletonRows } from '../components/TableSkeleton';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
 
 export const Campaigns = () => {
   const { token } = useAuth();
@@ -22,6 +25,7 @@ export const Campaigns = () => {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<{ id: number; name: string; status: string } | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [loadingList, setLoadingList] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [page, setPage] = useQueryState('page', 1 as any, 'number');
   const [pages, setPages] = useState(0);
@@ -33,6 +37,7 @@ export const Campaigns = () => {
 
   const load = async (targetPage = page) => {
     if (!token) return;
+    setLoadingList(true);
     const [cRes, pRes] = await Promise.all([
       api.campaignsIndex(token, { per_page: 10, page: targetPage, q, status: status || undefined, order_by: orderBy, order }),
       api.pipelinesIndex(token, { per_page: 50 })
@@ -44,6 +49,7 @@ export const Campaigns = () => {
       toast.error(t('campaigns.delete_failed'));
     }
     if (pRes.ok && pRes.data) setPipelines(pRes.data.pipelines);
+    setLoadingList(false);
   };
 
   useEffect(() => { load(page || 1); }, [token]);
@@ -84,9 +90,9 @@ export const Campaigns = () => {
   return (
     <>
       <Typography variant="h5" fontWeight={700} gutterBottom>{t('campaigns.title')}</Typography>
-      <Card sx={{ mb: 2 }}>
+      <Card className="glass fade-in" sx={{ mb: 2 }}>
         <CardContent sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <TextField size="small" label={t('campaigns.title')} value={name} onChange={(e) => setName(e.target.value)} />
+          <TextField size="small" label={t('campaigns.title')} value={name} onChange={(e) => setName(e.target.value)} sx={{ minWidth: 220 }} />
           <TextField select size="small" label={t('leads.pipeline')} value={pipelineId as any} onChange={(e) => setPipelineId((e.target.value as any) || '')} sx={{ minWidth: 220 }}>
             <MenuItem value="">(No pipeline)</MenuItem>
             {pipelines.map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
@@ -96,10 +102,14 @@ export const Campaigns = () => {
             {['draft','scheduled','running','paused','completed','archived'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
           </TextField>
           <SearchBar value={q} onChange={setQ} placeholder={t('campaigns.search')} />
-          <Button variant="contained" onClick={() => setCreateOpen(true)}>{t('campaigns.new')}</Button>
+          <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setCreateOpen(true)} sx={{
+            background: 'linear-gradient(135deg,#6366f1,#22d3ee)',
+            color: 'white', fontWeight: 700,
+            '&:hover': { filter: 'brightness(1.05)', background: 'linear-gradient(135deg,#6366f1,#22d3ee)' }
+          }}>{t('campaigns.new')}</Button>
         </CardContent>
       </Card>
-      <TableContainer component={Card}>
+      <TableContainer component={Card} className="glass slide-up">
         <Table size="small">
           <TableHead>
             <TableRow>
@@ -117,25 +127,22 @@ export const Campaigns = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {[...items]
+            {loadingList ? <TableSkeletonRows rows={5} cols={3} /> : [...items]
               .filter((c) => !status || c.status === status)
               .filter((c) => !q || c.name?.toLowerCase().includes(q.toLowerCase()))
               .sort((a:any,b:any)=>{ const key = orderBy; const o = order === 'asc' ? 1 : -1; if(a[key]<b[key]) return -1*o; if(a[key]>b[key]) return 1*o; return 0; })
               .map((c) => (
-              <TableRow key={c.id} hover>
+              <TableRow key={c.id} hover sx={{ '&:hover': { backgroundColor: 'rgba(99,102,241,0.06)' } }}>
                 <TableCell>{c.name}</TableCell>
                 <TableCell>
-                  <StatusChip value={c.status} />
-                  <TextField
-                    select size="small" value={c.status}
-                    onChange={async (e) => {
-                      const next = e.target.value;
+                  <StatusSelectChip
+                    value={c.status}
+                    options={['draft','scheduled','running','paused','completed','archived']}
+                    onChange={async (next) => {
                       const res = await api.campaignsUpdate(token!, c.id, { status: next });
                       if (res.ok) { toast.success(t('campaigns.updated')); await load(); } else { toast.error(t('campaigns.update_failed')); }
                     }}
-                  >
-                    {['draft','scheduled','running','paused','completed','archived'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
-                  </TextField>
+                  />
                 </TableCell>
                 <TableCell align="right"> 
                   <IconButton size="small" aria-label="edit" onClick={() => setEditing({ id: c.id, name: c.name, status: c.status })}><EditIcon fontSize="small" /></IconButton>

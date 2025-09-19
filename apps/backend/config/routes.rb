@@ -48,8 +48,10 @@ Rails.application.routes.draw do
 
         namespace :integrations do
           resource :apollo, only: :create
+          resource :discover, only: :create
         end
         post 'integrations/apollo', to: 'integrations/apollo#create'
+        post 'integrations/discover', to: 'integrations/discover#create'
         namespace :internal do
           post 'profile_update', to: 'tools#profile_update'
           post 'apollo_fetch', to: 'tools#apollo_fetch'
@@ -83,11 +85,14 @@ Rails.application.routes.draw do
       end
       namespace :integrations do
         resource :apollo, only: :create
+        resource :discover, only: :create
       end
       post 'integrations/apollo', to: 'integrations/apollo#create'
+      post 'integrations/discover', to: 'integrations/discover#create'
       namespace :internal do
         post 'profile_update', to: 'tools#profile_update'
         post 'apollo_fetch', to: 'tools#apollo_fetch'
+        post 'discover_leads', to: 'tools#discover_leads'
       end
       resource :account, only: %i[show update]
       namespace :auth do
@@ -116,4 +121,5 @@ Rails.application.routes.draw do
 
   # Explicit route for test environment safety
   post '/api/v1/integrations/apollo', to: 'api/v1/integrations/apollo#create'
+  post '/api/v1/integrations/discover', to: 'api/v1/integrations/discover#create'
 end

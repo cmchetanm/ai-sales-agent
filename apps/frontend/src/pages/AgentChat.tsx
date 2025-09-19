@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Card, CardContent, IconButton, Stack, TextField, Typography } from '@mui/material';
+import { Card, CardContent, IconButton, Stack, TextField, Typography, LinearProgress } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
@@ -43,16 +43,26 @@ export const AgentChat = () => {
   return (
     <Stack spacing={2}>
       <Typography variant="h5" fontWeight={700}>{t('chat.title')}</Typography>
-      <Card>
+      <Card className="glass">
+        {sending && <LinearProgress color="secondary" />}
         <CardContent>
           <div style={{ maxHeight: 480, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
             {messages.map((m, i) => (
-              <div key={i} style={{ alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '75%' }}>
-                <div style={{ padding: '8px 12px', borderRadius: 12, background: m.role === 'user' ? '#4f46e5' : '#0f172a', color: '#fff' }}>
+              <div key={i} className="fade-in" style={{ alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '75%' }}>
+                <div style={{ padding: '8px 12px', borderRadius: 12, background: m.role === 'user' ? '#6d72f3' : '#111a2e', color: '#fff' }}>
                   {m.content}
                 </div>
               </div>
             ))}
+            {sending && (
+              <div style={{ alignSelf: 'flex-start' }}>
+                <div className="typing">
+                  <span className="dot" />
+                  <span className="dot" />
+                  <span className="dot" />
+                </div>
+              </div>
+            )}
             <div ref={bottomRef} />
           </div>
         </CardContent>

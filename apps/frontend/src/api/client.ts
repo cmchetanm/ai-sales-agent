@@ -142,6 +142,11 @@ export const api = {
     { method: 'POST', body: JSON.stringify({ filters }) },
     token
   ),
+  discoverLeads: (token: string, filters: Record<string, any>) => request<{ status: string }>(
+    '/api/v1/integrations/discover',
+    { method: 'POST', body: JSON.stringify({ filters }) },
+    token
+  ),
 };
 
 function toQS(params: Record<string, any>): string {

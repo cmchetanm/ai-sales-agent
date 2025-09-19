@@ -11,15 +11,16 @@ function buildTheme(mode: ThemeMode) {
   return createTheme({
     palette: {
       mode,
-      primary: { main: '#6366f1' },
+      primary: { main: '#6d72f3' },
+      secondary: { main: '#22d3ee' },
       background: isDark
-        ? { default: '#0b1220', paper: '#0f172a' }
-        : { default: '#f6f7fb', paper: '#ffffff' },
+        ? { default: '#0e1424', paper: '#111a2e' }
+        : { default: '#f3f6fb', paper: '#ffffff' },
     },
     shape: { borderRadius: 12 },
     typography: {
       fontFamily:
-        'Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Ubuntu, Cantarell, Helvetica Neue, Arial',
+        'Sora, Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Ubuntu, Cantarell, Helvetica Neue, Arial',
       fontSize: 13,
       h5: { fontSize: 20, fontWeight: 700 },
       h6: { fontSize: 16, fontWeight: 700 },
@@ -32,10 +33,13 @@ function buildTheme(mode: ThemeMode) {
       MuiCard: {
         styleOverrides: {
           root: {
-            border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
+            border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
+            transition: 'transform .2s ease, box-shadow .2s ease',
+            '&:hover': { transform: 'translateY(-1px)' }
           },
         },
       },
+      MuiPaper: { styleOverrides: { root: { backgroundImage: 'none' } } },
       MuiTextField: { defaultProps: { size: 'small' } },
       MuiTable: { defaultProps: { size: 'small' } },
       MuiTableCell: { styleOverrides: { root: { paddingTop: 8, paddingBottom: 8 } } },
@@ -50,13 +54,6 @@ function buildTheme(mode: ThemeMode) {
         }
       },
       MuiToolbar: { styleOverrides: { root: { minHeight: 56 } } },
-      MuiPaper: {
-        styleOverrides: {
-          root: {
-            backgroundImage: 'none',
-          },
-        },
-      },
     },
   });
 }
