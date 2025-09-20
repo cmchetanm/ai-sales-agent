@@ -40,7 +40,12 @@ Rails.application.routes.draw do
         resource :health, only: [:show], controller: :health
         resources :plans, only: [:index]
         resources :pipelines
-        resources :leads
+        resources :leads do
+          collection do
+            post :import
+            patch :bulk_update
+          end
+        end
         resources :campaigns
         resources :chat_sessions, only: %i[create show] do
           resources :messages, only: %i[index create], controller: 'chat_messages'
@@ -78,7 +83,20 @@ Rails.application.routes.draw do
       resource :health, only: [:show], controller: :health
       resources :plans, only: [:index]
       resources :pipelines
-      resources :leads
+      resources :leads do
+        collection do
+          post :import
+          patch :bulk_update
+        end
+      end
+      resources :leads do
+        resources :activities, only: [:index, :create]
+        collection do
+          post :import
+          patch :bulk_update
+        end
+      end
+      resources :email_templates
       resources :campaigns
       resources :chat_sessions, only: %i[create show] do
         resources :messages, only: %i[index create], controller: 'chat_messages'

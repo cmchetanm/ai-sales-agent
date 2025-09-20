@@ -9,9 +9,12 @@ class Account < ApplicationRecord
   has_many :pipelines, dependent: :destroy
   has_many :leads, dependent: :destroy
   has_many :campaigns, dependent: :destroy
+  has_many :email_templates, dependent: :destroy
   has_many :email_messages, dependent: :destroy
   has_many :follow_ups, dependent: :destroy
   has_many :chat_sessions, dependent: :destroy
+  has_many :companies, dependent: :destroy
+  has_many :activities, dependent: :destroy
 
   accepts_nested_attributes_for :profile
 

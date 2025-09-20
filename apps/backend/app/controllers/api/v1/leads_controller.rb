@@ -3,6 +3,7 @@
 module Api
   module V1
     class LeadsController < Api::BaseController
+      require 'csv'
       def index
         scope = policy_scope(current_account.leads)
         scope = apply_filters(scope)
@@ -53,6 +54,42 @@ module Api
         head :no_content
       end
 
+      # PATCH /api/v1/leads/bulk_update
+      def bulk_update
+        authorize Lead, :update?
+        ids = Array(params[:ids]).map(&:to_i).uniq
+        return render(json: { error: 'ids required' }, status: :bad_request) if ids.empty?
+
+        attrs = params.fetch(:lead, {}).permit(:status, :pipeline_id, :assigned_user_id, :do_not_contact, :email_opt_out_at).to_h.symbolize_keys
+        leads = policy_scope(current_account.leads).where(id: ids)
+        pipeline = nil
+        if attrs[:pipeline_id].present?
+          pipeline = current_account.pipelines.find(attrs[:pipeline_id])
+        end
+        updated = 0
+        leads.find_each do |l|
+          l.pipeline = pipeline if pipeline
+          l.assign_attributes(attrs.except(:pipeline_id))
+          updated += 1 if l.save
+        end
+        render json: { updated: updated }, status: :ok
+      rescue ActiveRecord::RecordInvalid => e
+        render json: { errors: e.record.errors.full_messages }, status: :unprocessable_content
+      end
+
+      # POST /api/v1/leads/import
+      # Accepts JSON { csv: "...string...", pipeline_id?, assigned_user_id? }
+      def import
+        authorize Lead, :create?
+        csv = params[:csv].to_s
+        return render(json: { error: 'csv required' }, status: :bad_request) if csv.blank?
+        LeadImportJob.perform_later(account_id: current_account.id,
+                                    csv: csv,
+                                    pipeline_id: params[:pipeline_id],
+                                    assigned_user_id: params[:assigned_user_id])
+        render json: { status: 'queued' }, status: :accepted
+      end
+
       private
 
       def per_page
@@ -82,6 +119,9 @@ module Api
           :phone,
           :linkedin_url,
           :website,
+          :assigned_user_id,
+          :do_not_contact,
+          :email_opt_out_at,
           :score,
           :last_contacted_at,
           enrichment: {}
@@ -91,6 +131,8 @@ module Api
       def apply_filters(scope)
         scope = scope.where(pipeline_id: params[:pipeline_id]) if params[:pipeline_id].present?
         scope = scope.where(status: params[:status]) if params[:status].present?
+        scope = scope.where(assigned_user_id: params[:assigned_user_id]) if params[:assigned_user_id].present?
+        scope = scope.where(do_not_contact: ActiveModel::Type::Boolean.new.cast(params[:do_not_contact])) if params.key?(:do_not_contact)
         scope = scope.where(source: params[:source]) if params[:source].present?
         scope = scope.where('company ILIKE ?', "%#{params[:company].to_s.strip}%") if params[:company].present?
         if params[:updated_after].present?

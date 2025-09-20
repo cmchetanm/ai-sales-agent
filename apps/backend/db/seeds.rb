@@ -80,5 +80,23 @@ if ENV.fetch('SEED_DEMO', 'true').casecmp?('true')
       c.status = 'draft'
       c.audience_filters = { 'status' => 'new' }
     end
+
+    # Email templates (demo)
+    account.email_templates.find_or_create_by!(name: 'Intro') do |t|
+      t.subject = 'Quick intro'
+      t.body = '<p>Hi {{first_name}},</p><p>I loved your work at {{company}}. Can we chat about {{topic}}?</p>'
+      t.format = 'html'
+      t.category = 'outreach'
+      t.locale = 'en'
+      t.variables = { sample: { first_name: 'Ava', company: 'Acme', topic: 'AI automation' } }
+    end
+    account.email_templates.find_or_create_by!(name: 'Follow Up 1') do |t|
+      t.subject = 'Following up'
+      t.body = 'Just bubbling this up. Any thoughts on {{topic}}?'
+      t.format = 'text'
+      t.category = 'follow_up'
+      t.locale = 'en'
+      t.variables = { sample: { topic: 'AI automation' } }
+    end
   end
 end
