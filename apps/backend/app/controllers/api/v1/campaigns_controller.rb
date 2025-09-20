@@ -61,6 +61,30 @@ module Api
         head :no_content
       end
 
+      # GET /api/v1/campaigns/:id/preview
+      def preview
+        campaign = current_account.campaigns.find(params[:id])
+        authorize campaign, :show?
+        render json: { campaign_id: campaign.id, target_count: campaign.target_scope.count }
+      end
+
+      # POST /api/v1/campaigns/:id/start
+      def start
+        campaign = current_account.campaigns.find(params[:id])
+        authorize campaign, :update?
+        campaign.update!(status: 'running') if campaign.status.in?(%w[draft scheduled paused])
+        CampaignRunJob.perform_later(campaign_id: campaign.id)
+        render json: { campaign: CampaignSerializer.new(campaign).serializable_hash }, status: :accepted
+      end
+
+      # POST /api/v1/campaigns/:id/pause
+      def pause
+        campaign = current_account.campaigns.find(params[:id])
+        authorize campaign, :update?
+        campaign.update!(status: 'paused') if campaign.status.in?(%w[running scheduled])
+        render json: { campaign: CampaignSerializer.new(campaign).serializable_hash }
+      end
+
       private
 
       def per_page

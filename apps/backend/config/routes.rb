@@ -46,7 +46,13 @@ Rails.application.routes.draw do
             patch :bulk_update
           end
         end
-        resources :campaigns
+        resources :campaigns do
+          member do
+            get :preview
+            post :start
+            post :pause
+          end
+        end
         resources :chat_sessions, only: %i[create show] do
           resources :messages, only: %i[index create], controller: 'chat_messages'
         end
@@ -97,7 +103,13 @@ Rails.application.routes.draw do
         end
       end
       resources :email_templates
-      resources :campaigns
+      resources :campaigns do
+        member do
+          get :preview
+          post :start
+          post :pause
+        end
+      end
       resources :chat_sessions, only: %i[create show] do
         resources :messages, only: %i[index create], controller: 'chat_messages'
       end
