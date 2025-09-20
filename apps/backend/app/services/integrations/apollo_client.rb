@@ -62,7 +62,13 @@ module Integrations
         first_name = p['first_name'] || p.dig('name', 'first') || (p['name'].to_s.split(' ').first if p['name'])
         last_name  = p['last_name']  || p.dig('name', 'last')  || (p['name'].to_s.split(' ').last  if p['name'])
 
-        out = { first_name: first_name, last_name: last_name, email: email, company: org_name }.compact
+        title = p['title'] || p['person_title'] || p['headline']
+        linkedin = p['linkedin_url'] || p['linkedin_profile_url'] || p.dig('organization', 'linkedin_url')
+        company_size = p.dig('organization', 'estimated_num_employees') || p.dig('company', 'employee_count')
+        revenue = p.dig('organization', 'annual_revenue') || p.dig('company', 'revenue')
+
+        out = { first_name: first_name, last_name: last_name, email: email, company: org_name, job_title: title, linkedin_url: linkedin,
+                enrichment: { company_size:, revenue: }.compact, source: 'apollo' }.compact
         out if out[:first_name] || out[:last_name] || out[:email]
       end
       return mapped if mapped.any?

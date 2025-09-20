@@ -37,6 +37,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await i18n.changeLanguage(preferred);
         }
       } catch {}
+    } else if (res.status === 401) {
+      // Token expired or invalid; clear auth state
+      try { localStorage.removeItem('auth_token'); } catch {}
+      setToken(null);
+      setUser(null);
+      setAccount(null);
     }
     setLoading(false);
   }, [token]);

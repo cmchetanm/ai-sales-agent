@@ -28,10 +28,10 @@ RSpec.describe Integrations::ApolloClient do
       client = described_class.new(api_key: 'test-key', enabled: true)
       results = client.search_people(keywords: 'saas')
 
-      expect(results).to eq([
-        { first_name: 'Jane', last_name: 'Doe', email: 'jane@example.com', company: 'Acme Inc' }
-      ])
+      expect(results.size).to eq(1)
+      expect(results.first).to include(first_name: 'Jane', last_name: 'Doe', email: 'jane@example.com', company: 'Acme Inc')
+      # New mapping may add optional fields like enrichment/source
+      expect(results.first[:source]).to eq('apollo')
     end
   end
 end
-

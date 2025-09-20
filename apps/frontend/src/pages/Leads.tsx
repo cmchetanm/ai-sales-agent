@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
-import { Button, Card, CardContent, IconButton, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel, Checkbox, Stack } from '@mui/material';
+import { Button, Card, CardContent, IconButton, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel, Checkbox, Stack, Chip, Tooltip } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -147,7 +147,7 @@ export const Leads = () => {
             if (timer.current) { window.clearInterval(timer.current); timer.current = null; }
             timer.current = window.setInterval(() => load(page || 1), 2000);
             await api.discoverLeads(token, { keywords: q || 'saas', role: 'cto', location: 'US' });
-          }}>{t('leads.fetch_apollo')}</Button>
+          }}>{t('leads.sync_apollo') || t('leads.fetch_apollo')}</Button>
         </CardContent>
       </Card>
       {discovering && (
@@ -247,7 +247,11 @@ export const Leads = () => {
                     {users.map((u) => <MenuItem key={u.id} value={u.id}>{(u.first_name || u.last_name) ? `${u.first_name || ''} ${u.last_name || ''}`.trim() : u.email}</MenuItem>)}
                   </TextField>
                 </TableCell>
-                <TableCell>{l.score ?? ''}</TableCell>
+                <TableCell>{l.score != null ? (
+                  <Tooltip title={t('leads.score') + ': ' + l.score}>
+                    <Chip size="small" label={(l.score_band || (l.score >= 75 ? 'hot' : l.score >= 40 ? 'warm' : 'cold')).toUpperCase()} color={l.score_band === 'hot' || l.score >= 75 ? 'error' : (l.score_band === 'warm' || l.score >= 40 ? 'warning' : 'default')} />
+                  </Tooltip>
+                ) : ''}</TableCell>
                 <TableCell>{l.last_contacted_at ? new Date(l.last_contacted_at).toLocaleDateString() : ''}</TableCell>
                 <TableCell align="right">
                   <Button size="small" variant={l.do_not_contact ? 'contained' : 'outlined'} color={l.do_not_contact ? 'warning' : 'inherit'} onClick={async () => {
@@ -256,6 +260,7 @@ export const Leads = () => {
                   }}>{l.do_not_contact ? (t('leads.dnc_on') || 'DNC On') : (t('leads.dnc_off') || 'DNC Off')}</Button>
                   <IconButton size="small" aria-label="view" onClick={() => setDetails(l)}><InfoOutlinedIcon fontSize="small" /></IconButton>
                   <IconButton size="small" aria-label="edit" onClick={() => setEditing({ id: l.id, email: l.email, first_name: l.first_name, last_name: l.last_name, company: l.company, job_title: l.job_title, location: l.location, phone: l.phone, linkedin_url: l.linkedin_url, website: l.website })}><EditIcon fontSize="small" /></IconButton>
+                  <Button size="small" variant="text" onClick={async () => { if (!token) return; const res = await api.leadsQualify(token, l.id); if (res.ok) toast.success(t('leads.qualification_queued') || 'Qualification queued'); else toast.error(t('leads.update_failed')); }}>{t('leads.qualify') || 'Qualify'}</Button>
                   <IconButton size="small" aria-label="delete" onClick={() => setDeleting(l.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                 </TableCell>
               </TableRow>

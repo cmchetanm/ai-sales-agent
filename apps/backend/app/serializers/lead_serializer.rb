@@ -23,10 +23,21 @@ class LeadSerializer < ApplicationSerializer
       do_not_contact: resource.do_not_contact,
       email_opt_out_at: resource.email_opt_out_at,
       score: resource.score,
+      score_band: score_band,
       last_contacted_at: resource.last_contacted_at,
       enrichment: resource.enrichment,
+      attribution: resource.attribution,
       created_at: resource.created_at,
       updated_at: resource.updated_at
     }
+  end
+
+  private
+
+  def score_band
+    s = resource.score.to_i
+    return 'hot' if s >= 75
+    return 'warm' if s >= 40
+    'cold'
   end
 end

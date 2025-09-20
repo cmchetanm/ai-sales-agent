@@ -33,7 +33,24 @@ export async function request<T>(path: string, options: RequestInit = {}, token?
   try {
     body = await res.json();
   } catch (_) {}
-  if (!res.ok) return { ok: false, status: res.status, error: body ?? await res.text() };
+  if (!res.ok) {
+    // Global auth handling: if unauthorized/forbidden, clear token and redirect to login
+    if (res.status === 401 || res.status === 419) {
+      try { localStorage.removeItem('auth_token'); } catch {}
+      try {
+        const lang = (i18n?.language || 'en').split('-')[0];
+        const isLogin = typeof window !== 'undefined' && /\/login$/.test(window.location.pathname);
+        // Preserve the originally requested path so we can return after login
+        const next = typeof window !== 'undefined' && !isLogin ? encodeURIComponent(window.location.pathname + window.location.search) : '';
+        const loginPath = `/${lang}/login?expired=1${next ? `&next=${next}` : ''}`;
+        if (typeof window !== 'undefined' && !isLogin) {
+          // Avoid infinite redirects from login route itself
+          window.location.assign(loginPath);
+        }
+      } catch {}
+    }
+    return { ok: false, status: res.status, error: body ?? await res.text() };
+  }
   return { ok: true, status: res.status, data: body };
 }
 
@@ -109,6 +126,11 @@ export const api = {
   leadsActivitiesCreate: (token: string, leadId: number, attrs: any) => request<{ activity: any }>(
     `/api/v1/leads/${leadId}/activities`,
     { method: 'POST', body: JSON.stringify({ activity: attrs }) },
+    token
+  ),
+  leadsQualify: (token: string, leadId: number) => request<{ status: string }>(
+    `/api/v1/leads/${leadId}/qualify`,
+    { method: 'POST' },
     token
   ),
   leadsDelete: (token: string, id: number) => request<void>(

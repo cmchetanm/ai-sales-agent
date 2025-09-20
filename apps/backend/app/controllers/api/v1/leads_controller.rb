@@ -54,6 +54,14 @@ module Api
         head :no_content
       end
 
+      # POST /api/v1/leads/:id/qualify
+      def qualify
+        lead = current_account.leads.find(params[:id])
+        authorize lead, :update?
+        LeadQualificationJob.perform_later(lead_id: lead.id)
+        render json: { status: 'queued' }, status: :accepted
+      end
+
       # GET /api/v1/leads/export
       def export
         authorize Lead, :index?

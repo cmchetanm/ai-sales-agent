@@ -50,6 +50,9 @@ Rails.application.routes.draw do
             patch :bulk_update
             get :export
           end
+          member do
+            post :qualify
+          end
         end
         resources :campaigns do
           member do
@@ -104,6 +107,9 @@ Rails.application.routes.draw do
           post :import
           patch :bulk_update
           get :export
+        end
+        member do
+          post :qualify
         end
       end
       resources :leads do

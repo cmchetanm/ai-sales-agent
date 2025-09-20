@@ -69,10 +69,13 @@ class LeadDiscoveryJob < ApplicationJob
         l.first_name = attrs[:first_name]
         l.last_name  = attrs[:last_name]
         l.company    = attrs[:company]
+        l.job_title  = attrs[:job_title]
+        l.linkedin_url = attrs[:linkedin_url]
         l.status     = 'new'
         l.source     = attrs[:source].presence || 'aggregator'
+        l.enrichment = (l.enrichment || {}).merge(attrs[:enrichment].to_h)
+        l.attribution = { vendor: l.source, fetched_at: Time.current.iso8601 }
       end
     end
   end
 end
-
