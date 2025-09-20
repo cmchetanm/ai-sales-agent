@@ -1,3 +1,10 @@
+# Ensure background jobs run inline during seeding to avoid external Redis dependency
+begin
+  ActiveJob::Base.queue_adapter = :inline
+rescue StandardError
+  # no-op if ActiveJob not loaded yet
+end
+
 plans = [
   {
     name: 'Basic',
