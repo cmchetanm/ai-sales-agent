@@ -21,7 +21,9 @@ export const Leads = () => {
   const { token } = useAuth();
   const [items, setItems] = useState<any[]>([]);
   const [pipelines, setPipelines] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [pipelineId, setPipelineId] = useState<number | ''>('' as any);
+  const [ownerId, setOwnerId] = useState<number | ''>('' as any);
   const [email, setEmail] = useState('lead@example.com');
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<{ id: number; email: string } | null>(null);
@@ -33,6 +35,7 @@ export const Leads = () => {
   const [bulkPipelineId, setBulkPipelineId] = useState<number | ''>('' as any);
   const [importOpen, setImportOpen] = useState(false);
   const [importCsv, setImportCsv] = useState('');
+  const [importOwnerId, setImportOwnerId] = useState<number | ''>('' as any);
   const [page, setPage] = useQueryState('page', 1 as any, 'number');
   const [pages, setPages] = useState(0);
   const [orderBy, setOrderBy] = useQueryState('orderBy', 'email');
@@ -47,9 +50,10 @@ export const Leads = () => {
   const load = async (targetPage = page) => {
     if (!token) return;
     setLoadingList(true);
-    const [leadsRes, pipesRes] = await Promise.all([
-      api.leadsIndex(token, { per_page: 10, page: targetPage, pipeline_id: pipelineId || undefined, status: status || undefined, q, order_by: orderBy, order }),
-      api.pipelinesIndex(token, { per_page: 50 })
+    const [leadsRes, pipesRes, usersRes] = await Promise.all([
+      api.leadsIndex(token, { per_page: 10, page: targetPage, pipeline_id: pipelineId || undefined, status: status || undefined, assigned_user_id: ownerId || undefined, q, order_by: orderBy, order }),
+      api.pipelinesIndex(token, { per_page: 50 }),
+      api.usersIndex(token, { per_page: 100 })
     ]);
     if (leadsRes.ok && leadsRes.data) {
       setItems(leadsRes.data.leads);
@@ -58,11 +62,12 @@ export const Leads = () => {
       toast.error(t('leads.delete_failed'));
     }
     if (pipesRes.ok && pipesRes.data) setPipelines(pipesRes.data.pipelines);
+    if (usersRes.ok && usersRes.data) setUsers(usersRes.data.users);
     setLoadingList(false);
     if (discovering && ++polls.current >= 4) { setDiscovering(false); polls.current = 0; if (timer.current) { window.clearInterval(timer.current); timer.current = null; } }
   };
 
-  useEffect(() => { load(page || 1); }, [token, pipelineId]);
+  useEffect(() => { load(page || 1); }, [token, pipelineId, ownerId]);
 
   const create = async (e: FormEvent) => {
     e.preventDefault();
@@ -125,6 +130,10 @@ export const Leads = () => {
           <TextField select size="small" label={t('leads.status')} value={status} onChange={(e) => setStatus(e.target.value)} sx={{ minWidth: 180 }}>
             <MenuItem value="">{t('leads.all')}</MenuItem>
             {['new','researching','enriched','outreach','scheduled','responded','won','lost','archived'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+          </TextField>
+          <TextField select size="small" label={t('leads.owner') || 'Owner'} value={ownerId as any} onChange={(e) => setOwnerId((e.target.value as any) || '')} sx={{ minWidth: 200 }}>
+            <MenuItem value="">{t('leads.all')}</MenuItem>
+            {users.map((u) => <MenuItem key={u.id} value={u.id}>{(u.first_name || u.last_name) ? `${u.first_name || ''} ${u.last_name || ''}`.trim() : u.email}</MenuItem>)}
           </TextField>
           <SearchBar value={q} onChange={setQ} placeholder={t('leads.search')} />
           <Button variant="contained" startIcon={<PersonAddAltOutlinedIcon />} onClick={() => setCreateOpen(true)}>{t('leads.new')}</Button>
@@ -221,6 +230,14 @@ export const Leads = () => {
                   />
                 </TableCell>
                 <TableCell align="right">
+                  <TextField select size="small" value={l.assigned_user_id || ''} onChange={async (e) => {
+                    const id = Number(e.target.value);
+                    const res = await api.leadsUpdate(token!, l.id, { assigned_user_id: id || null });
+                    if (res.ok) { toast.success(t('leads.updated')); await load(); } else { toast.error(t('leads.update_failed')); }
+                  }} sx={{ minWidth: 160, mr: 1 }}>
+                    <MenuItem value="">—</MenuItem>
+                    {users.map((u) => <MenuItem key={u.id} value={u.id}>{(u.first_name || u.last_name) ? `${u.first_name || ''} ${u.last_name || ''}`.trim() : u.email}</MenuItem>)}
+                  </TextField>
                   <Button size="small" variant={l.do_not_contact ? 'contained' : 'outlined'} color={l.do_not_contact ? 'warning' : 'inherit'} onClick={async () => {
                     const res = await api.leadsUpdate(token!, l.id, { do_not_contact: !l.do_not_contact });
                     if (res.ok) { toast.success(t('leads.updated')); await load(); } else { toast.error(t('leads.update_failed')); }
@@ -276,13 +293,17 @@ export const Leads = () => {
               <MenuItem value="">—</MenuItem>
               {pipelines.map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
             </TextField>
+            <TextField select size="small" label={t('leads.owner') || 'Owner'} value={importOwnerId as any} onChange={(e) => setImportOwnerId((e.target.value as any) || '')} sx={{ minWidth: 220 }}>
+              <MenuItem value="">—</MenuItem>
+              {users.map((u) => <MenuItem key={u.id} value={u.id}>{(u.first_name || u.last_name) ? `${u.first_name || ''} ${u.last_name || ''}`.trim() : u.email}</MenuItem>)}
+            </TextField>
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setImportOpen(false)}>{t('common.cancel')}</Button>
           <Button variant="contained" onClick={async () => {
             if (!token || !importCsv.trim()) return;
-            const res = await api.leadsImport(token, importCsv, { pipeline_id: pipelineId || undefined });
+            const res = await api.leadsImport(token, importCsv, { pipeline_id: pipelineId || undefined, assigned_user_id: importOwnerId || undefined });
             if (res.ok) { toast.success(t('common.queued') || 'Queued'); setImportOpen(false); setImportCsv(''); } else { toast.error(t('leads.update_failed')); }
           }}>{t('common.upload') || 'Upload'}</Button>
         </DialogActions>

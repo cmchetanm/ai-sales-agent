@@ -8,6 +8,7 @@ vi.mock('../api/client', () => ({
   api: {
     leadsIndex: () => Promise.resolve({ ok: true, data: { leads: [{ id: 1, email: 'lead@example.com', status: 'new' }], pagination: {} } }),
     pipelinesIndex: () => Promise.resolve({ ok: true, data: { pipelines: [{ id: 9, name: 'Sales' }] } }),
+    usersIndex: () => Promise.resolve({ ok: true, data: { users: [] } }),
     leadsCreate: () => Promise.resolve({ ok: true, data: { lead: { id: 2 } } })
   }
 }));
@@ -23,4 +24,3 @@ describe('Leads page', () => {
     expect(await screen.findByText('lead@example.com')).toBeInTheDocument();
   });
 });
-

@@ -162,6 +162,11 @@ export const api = {
     { method: 'POST', body: JSON.stringify({ filters }) },
     token
   ),
+  usersIndex: (token: string, params: Record<string, any> = {}) => request<{ users: any[] }>(
+    `/api/v1/users${toQS(params)}`,
+    {},
+    token
+  ),
   pipelinesStats: (token: string, id: number) => request<{ pipeline_id: number; stage_stats: any[]; status_counts: Record<string, number> }>(
     `/api/v1/pipelines/${id}/stats`,
     {},
