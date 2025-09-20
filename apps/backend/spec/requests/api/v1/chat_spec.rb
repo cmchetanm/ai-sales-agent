@@ -52,4 +52,50 @@ RSpec.describe 'API V1 Chat', type: :request do
     expect(response).to have_http_status(:created)
     expect(json_body['assistant']['content']).to match(/industry|roles|geography/i)
   end
+
+  it 'forwards Accept-Language to the LLM service' do
+    post '/api/v1/chat_sessions', headers: auth_headers(user)
+    id = json_body['chat_session']['id']
+
+    # Make a request with a specific locale and then assert LLM call used it
+    post "/api/v1/chat_sessions/#{id}/messages",
+         headers: auth_headers(user, headers: { 'Accept-Language' => 'es' }),
+         params: { message: { content: 'Hola' } }.to_json
+
+    expect(response).to have_http_status(:created)
+    expect(a_request(:post, %r{/chat/messages}).with { |req| req.headers['Accept-Language'] == 'es' }).to have_been_made
+  end
+
+  it 'limits LLM context to the last 20 messages in chronological order' do
+    post '/api/v1/chat_sessions', headers: auth_headers(user)
+    id = json_body['chat_session']['id']
+    session = ChatSession.find(id)
+
+    # Pre-populate 25 alternating messages (older to newer)
+    25.times do |i|
+      session.chat_messages.create!(
+        sender_type: (i.even? ? 'User' : 'Assistant'),
+        content: "msg#{i + 1}",
+        sent_at: Time.current - (25 - i).minutes,
+        created_at: Time.current - (25 - i).minutes,
+        updated_at: Time.current - (25 - i).minutes
+      )
+    end
+
+    # Trigger one more user message; controller recomputes context after creating this
+    post "/api/v1/chat_sessions/#{id}/messages", headers: auth_headers(user), params: { message: { content: 'Final' } }.to_json
+    expect(response).to have_http_status(:created)
+
+    # Assert the LLM received only 20 messages: msg7..msg25 and then 'Final', in that order
+    expect(
+      a_request(:post, %r{/chat/messages}).with do |req|
+        body = JSON.parse(req.body) rescue {}
+        msgs = Array(body['messages'])
+        next false unless msgs.size == 20
+        first = msgs.first
+        last = msgs.last
+        first['content'] == 'msg7' && last['content'] == 'Final'
+      end
+    ).to have_been_made
+  end
 end
