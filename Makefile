@@ -82,7 +82,7 @@ backend-test:
 
 emailing-test:
 	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
-	@$(DOCKER_COMPOSE) run --rm $(EMAILING_SERVICE) bundle exec rspec
+	@$(DOCKER_COMPOSE) run --rm -e RAILS_ENV=test $(EMAILING_SERVICE) bash -lc "(bundle check || bundle install) && bundle exec rails db:prepare && bundle exec rspec"
 
 llm-test:
 	@echo "TODO: add python test command (pytest) once implemented"
