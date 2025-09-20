@@ -192,6 +192,10 @@ export const Leads = () => {
                 />
               </TableCell>
               <TableCell>Source</TableCell>
+              <TableCell>Name</TableCell>
+              <TableCell>Company</TableCell>
+              <TableCell>Title</TableCell>
+              <TableCell>Location</TableCell>
               <TableCell sortDirection={orderBy === 'email' ? (order as any) : false}>
                 <TableSortLabel active={orderBy === 'email'} direction={orderBy === 'email' ? (order as any) : 'asc'} onClick={() => setOrder(orderBy === 'email' && order === 'asc' ? 'desc' : 'asc') || setOrderBy('email')}>
                   {t('leads.email')}
@@ -202,11 +206,14 @@ export const Leads = () => {
                   {t('leads.status')}
                 </TableSortLabel>
               </TableCell>
+              <TableCell>Owner</TableCell>
+              <TableCell>Score</TableCell>
+              <TableCell>Last Contacted</TableCell>
               <TableCell>{t('common.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {loadingList ? <TableSkeletonRows rows={5} cols={3} /> : [...items]
+            {loadingList ? <TableSkeletonRows rows={5} cols={12} /> : [...items]
               .filter((l) => !status || l.status === status)
               .filter((l) => !q || (l.email?.toLowerCase().includes(q.toLowerCase()) || l.company?.toLowerCase().includes(q.toLowerCase())))
               .sort((a:any,b:any)=>{ const key = orderBy; const o = order === 'asc' ? 1 : -1; if(a[key]<b[key]) return -1*o; if(a[key]>b[key]) return 1*o; return 0; })
@@ -218,6 +225,10 @@ export const Leads = () => {
                   }} />
                 </TableCell>
                 <TableCell><SourceBadge source={l.source} /></TableCell>
+                <TableCell>{[l.first_name, l.last_name].filter(Boolean).join(' ')}</TableCell>
+                <TableCell>{l.company}</TableCell>
+                <TableCell>{l.job_title}</TableCell>
+                <TableCell>{l.location}</TableCell>
                 <TableCell>{l.email}</TableCell>
                 <TableCell>
                   <StatusSelectChip
@@ -229,7 +240,7 @@ export const Leads = () => {
                     }}
                   />
                 </TableCell>
-                <TableCell align="right">
+                <TableCell>
                   <TextField select size="small" value={l.assigned_user_id || ''} onChange={async (e) => {
                     const id = Number(e.target.value);
                     const res = await api.leadsUpdate(token!, l.id, { assigned_user_id: id || null });
@@ -238,11 +249,15 @@ export const Leads = () => {
                     <MenuItem value="">—</MenuItem>
                     {users.map((u) => <MenuItem key={u.id} value={u.id}>{(u.first_name || u.last_name) ? `${u.first_name || ''} ${u.last_name || ''}`.trim() : u.email}</MenuItem>)}
                   </TextField>
+                </TableCell>
+                <TableCell>{l.score ?? ''}</TableCell>
+                <TableCell>{l.last_contacted_at ? new Date(l.last_contacted_at).toLocaleDateString() : ''}</TableCell>
+                <TableCell align="right">
                   <Button size="small" variant={l.do_not_contact ? 'contained' : 'outlined'} color={l.do_not_contact ? 'warning' : 'inherit'} onClick={async () => {
                     const res = await api.leadsUpdate(token!, l.id, { do_not_contact: !l.do_not_contact });
                     if (res.ok) { toast.success(t('leads.updated')); await load(); } else { toast.error(t('leads.update_failed')); }
                   }}>{l.do_not_contact ? (t('leads.dnc_on') || 'DNC On') : (t('leads.dnc_off') || 'DNC Off')}</Button>
-                  <IconButton size="small" aria-label="edit" onClick={() => setEditing({ id: l.id, email: l.email })}><EditIcon fontSize="small" /></IconButton>
+                  <IconButton size="small" aria-label="edit" onClick={() => setEditing({ id: l.id, email: l.email, first_name: l.first_name, last_name: l.last_name, company: l.company, job_title: l.job_title, location: l.location, phone: l.phone, linkedin_url: l.linkedin_url, website: l.website })}><EditIcon fontSize="small" /></IconButton>
                   <IconButton size="small" aria-label="delete" onClick={() => setDeleting(l.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                 </TableCell>
               </TableRow>
@@ -253,8 +268,24 @@ export const Leads = () => {
       <PaginationControls page={page} pages={pages} onPageChange={(p) => load(p)} disabled={loading} />
       <Dialog open={!!editing} onClose={() => setEditing(null)}>
         <DialogTitle>{t('leads.edit_title')}</DialogTitle>
-        <DialogContent>
-          <TextField autoFocus margin="dense" fullWidth label={t('leads.email')} value={editing?.email || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, email: e.target.value } : prev)} />
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 520 }}>
+          <Stack direction="row" spacing={1}>
+            <TextField autoFocus margin="dense" fullWidth label={t('leads.first_name') || 'First name'} value={editing?.first_name || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, first_name: e.target.value } : prev)} />
+            <TextField margin="dense" fullWidth label={t('leads.last_name') || 'Last name'} value={editing?.last_name || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, last_name: e.target.value } : prev)} />
+          </Stack>
+          <TextField margin="dense" fullWidth label={t('leads.company') || 'Company'} value={editing?.company || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, company: e.target.value } : prev)} />
+          <Stack direction="row" spacing={1}>
+            <TextField margin="dense" fullWidth label={t('leads.job_title') || 'Job title'} value={editing?.job_title || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, job_title: e.target.value } : prev)} />
+            <TextField margin="dense" fullWidth label={t('leads.location') || 'Location'} value={editing?.location || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, location: e.target.value } : prev)} />
+          </Stack>
+          <Stack direction="row" spacing={1}>
+            <TextField margin="dense" fullWidth label={t('leads.email')} value={editing?.email || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, email: e.target.value } : prev)} />
+            <TextField margin="dense" fullWidth label={t('leads.phone') || 'Phone'} value={editing?.phone || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, phone: e.target.value } : prev)} />
+          </Stack>
+          <Stack direction="row" spacing={1}>
+            <TextField margin="dense" fullWidth label={t('leads.linkedin') || 'LinkedIn URL'} value={editing?.linkedin_url || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, linkedin_url: e.target.value } : prev)} />
+            <TextField margin="dense" fullWidth label={t('leads.website') || 'Website'} value={editing?.website || ''} onChange={(e) => setEditing((prev) => prev ? { ...prev, website: e.target.value } : prev)} />
+          </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditing(null)}>{t('common.cancel')}</Button>
@@ -272,8 +303,9 @@ export const Leads = () => {
       <CreateLeadDialog
         open={createOpen}
         pipelines={pipelines}
+        users={users}
         onClose={() => setCreateOpen(false)}
-        onCreate={async (attrs) => { setCreateOpen(false); setPipelineId(attrs.pipeline_id); setEmail(attrs.email); await create({ preventDefault: () => {} } as any); }}
+        onCreate={async (attrs) => { setCreateOpen(false); if (!token) return; const res = await api.leadsCreate(token, attrs); if (res.ok) { toast.success(t('leads.created') || 'Created'); await load(); } else { toast.error(t('leads.update_failed')); } }}
       />
 
       <Card sx={{ mt: 2 }}>
