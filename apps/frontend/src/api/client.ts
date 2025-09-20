@@ -117,6 +117,21 @@ export const api = {
     { method: 'DELETE' },
     token
   ),
+  campaignsPreview: (token: string, id: number) => request<{ campaign_id: number; target_count: number }>(
+    `/api/v1/campaigns/${id}/preview`,
+    {},
+    token
+  ),
+  campaignsStart: (token: string, id: number) => request<{ campaign: any }>(
+    `/api/v1/campaigns/${id}/start`,
+    { method: 'POST' },
+    token
+  ),
+  campaignsPause: (token: string, id: number) => request<{ campaign: any }>(
+    `/api/v1/campaigns/${id}/pause`,
+    { method: 'POST' },
+    token
+  ),
   chatSessionCreate: (token: string) => request<{ chat_session: { id: number } }>(
     '/api/v1/chat_sessions',
     { method: 'POST' },
@@ -145,6 +160,21 @@ export const api = {
   discoverLeads: (token: string, filters: Record<string, any>) => request<{ status: string }>(
     '/api/v1/integrations/discover',
     { method: 'POST', body: JSON.stringify({ filters }) },
+    token
+  ),
+  pipelinesStats: (token: string, id: number) => request<{ pipeline_id: number; stage_stats: any[]; status_counts: Record<string, number> }>(
+    `/api/v1/pipelines/${id}/stats`,
+    {},
+    token
+  ),
+  leadsBulkUpdate: (token: string, ids: number[], attrs: any) => request<{ updated: number }>(
+    '/api/v1/leads/bulk_update',
+    { method: 'PATCH', body: JSON.stringify({ ids, lead: attrs }) },
+    token
+  ),
+  leadsImport: (token: string, csv: string, opts: { pipeline_id?: number; assigned_user_id?: number } = {}) => request<{ status: string }>(
+    '/api/v1/leads/import',
+    { method: 'POST', body: JSON.stringify({ csv, ...opts }) },
     token
   ),
 };

@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
-import { Button, Card, CardContent, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel } from '@mui/material';
+import { Button, Card, CardContent, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel, Chip, Stack } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -24,6 +24,7 @@ export const Pipelines = () => {
   const [editing, setEditing] = useState<{ id: number; name: string } | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState<null | { stage_stats: any[]; status_counts: Record<string, number> }>(null);
   const [page, setPage] = useQueryState('page', 1 as any, 'number');
   const [pages, setPages] = useState(0);
   const [orderBy, setOrderBy] = useQueryState('orderBy', 'name');
@@ -116,7 +117,11 @@ export const Pipelines = () => {
               <TableRow key={p.id} hover>
                 <TableCell>{p.name}</TableCell>
                 <TableCell><StatusChip value={p.status} /></TableCell>
-                <TableCell align="right">
+                <TableCell align="right" sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                  <Button size="small" variant="outlined" onClick={async () => {
+                    const res = await api.pipelinesStats(token!, p.id);
+                    if (res.ok && res.data) setStatsOpen({ stage_stats: res.data.stage_stats, status_counts: res.data.status_counts });
+                  }}>{t('pipelines.stats') || 'Stats'}</Button>
                   <IconButton size="small" aria-label="edit" onClick={() => setEditing({ id: p.id, name: p.name })}><EditIcon fontSize="small" /></IconButton>
                   <IconButton size="small" aria-label="delete" onClick={() => setDeleting(p.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                 </TableCell>
@@ -150,6 +155,31 @@ export const Pipelines = () => {
         onClose={() => setCreateOpen(false)}
         onCreate={async (n) => { setCreateOpen(false); setName(n); await create({ preventDefault: () => {} } as any); }}
       />
+
+      <Dialog open={!!statsOpen} onClose={() => setStatsOpen(null)}>
+        <DialogTitle>{t('pipelines.stats') || 'Pipeline Stats'}</DialogTitle>
+        <DialogContent>
+          {statsOpen && (
+            <Stack spacing={2}>
+              <div>
+                <Typography variant="subtitle2">{t('pipelines.stage_stats') || 'Stage Stats'}</Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  {statsOpen.stage_stats.map((s, i) => (<Chip key={i} label={`${s.name}: ${s.count}`} />))}
+                </Stack>
+              </div>
+              <div>
+                <Typography variant="subtitle2">{t('pipelines.status_counts') || 'Status Counts'}</Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  {Object.entries(statsOpen.status_counts).map(([k, v]) => (<Chip key={k} label={`${k}: ${v}`} />))}
+                </Stack>
+              </div>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setStatsOpen(null)}>{t('common.close') || 'Close'}</Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };

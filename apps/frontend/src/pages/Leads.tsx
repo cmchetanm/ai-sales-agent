@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
-import { Button, Card, CardContent, IconButton, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel } from '@mui/material';
+import { Button, Card, CardContent, IconButton, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel, Checkbox, Stack } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -28,6 +28,11 @@ export const Leads = () => {
   const [deleting, setDeleting] = useState<number | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [loadingList, setLoadingList] = useState(true);
+  const [selected, setSelected] = useState<number[]>([]);
+  const [bulkStatus, setBulkStatus] = useState<string>('');
+  const [bulkPipelineId, setBulkPipelineId] = useState<number | ''>('' as any);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importCsv, setImportCsv] = useState('');
   const [page, setPage] = useQueryState('page', 1 as any, 'number');
   const [pages, setPages] = useState(0);
   const [orderBy, setOrderBy] = useQueryState('orderBy', 'email');
@@ -66,6 +71,21 @@ export const Leads = () => {
     const res = await api.leadsCreate(token, { pipeline_id: pipelineId, email, status: 'new' });
     setLoading(false);
     if (res.ok) await load();
+  };
+
+  const bulkApply = async (type: 'status' | 'pipeline') => {
+    if (!token || selected.length === 0) return;
+    const attrs: any = {};
+    if (type === 'status' && bulkStatus) attrs.status = bulkStatus;
+    if (type === 'pipeline' && bulkPipelineId) attrs.pipeline_id = bulkPipelineId;
+    if (Object.keys(attrs).length === 0) return;
+    const res = await api.leadsBulkUpdate(token, selected, attrs);
+    if (res.ok) { toast.success(t('leads.updated')); setSelected([]); await load(); } else { toast.error(t('leads.update_failed')); }
+  };
+
+  const handleImportFile = async (file: File) => {
+    const text = await file.text();
+    setImportCsv(text);
   };
 
   const submitEdit = async () => {
@@ -132,10 +152,36 @@ export const Leads = () => {
           <Button variant="contained" disabled={loading || !pipelineId} onClick={create as any}>{t('leads.create_lead')}</Button>
         </CardContent>
       </Card>
+      {selected.length > 0 && (
+        <Card sx={{ mb: 1 }}>
+          <CardContent sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Typography variant="body2">{t('common.selected') || 'Selected'}: {selected.length}</Typography>
+            <TextField select size="small" label={t('leads.status')} value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)} sx={{ minWidth: 160 }}>
+              <MenuItem value="">—</MenuItem>
+              {['new','researching','enriched','outreach','scheduled','responded','won','lost','archived'].map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+            </TextField>
+            <Button size="small" variant="contained" onClick={() => bulkApply('status')}>{t('common.apply') || 'Apply'}</Button>
+            <TextField select size="small" label={t('leads.pipeline')} value={bulkPipelineId as any} onChange={(e) => setBulkPipelineId((e.target.value as any) || '')} sx={{ minWidth: 220 }}>
+              <MenuItem value="">—</MenuItem>
+              {pipelines.map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
+            </TextField>
+            <Button size="small" variant="outlined" onClick={() => bulkApply('pipeline')}>{t('common.apply') || 'Apply'}</Button>
+          </CardContent>
+        </Card>
+      )}
       <TableContainer component={Card} className="glass slide-up">
         <Table size="small">
           <TableHead>
             <TableRow>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  indeterminate={selected.length > 0 && selected.length < items.length}
+                  checked={items.length > 0 && selected.length === items.length}
+                  onChange={(e) => {
+                    if (e.target.checked) setSelected(items.map(i => i.id)); else setSelected([]);
+                  }}
+                />
+              </TableCell>
               <TableCell>Source</TableCell>
               <TableCell sortDirection={orderBy === 'email' ? (order as any) : false}>
                 <TableSortLabel active={orderBy === 'email'} direction={orderBy === 'email' ? (order as any) : 'asc'} onClick={() => setOrder(orderBy === 'email' && order === 'asc' ? 'desc' : 'asc') || setOrderBy('email')}>
@@ -157,6 +203,11 @@ export const Leads = () => {
               .sort((a:any,b:any)=>{ const key = orderBy; const o = order === 'asc' ? 1 : -1; if(a[key]<b[key]) return -1*o; if(a[key]>b[key]) return 1*o; return 0; })
               .map((l) => (
               <TableRow key={l.id} hover>
+                <TableCell padding="checkbox">
+                  <Checkbox checked={selected.includes(l.id)} onChange={(e) => {
+                    setSelected((prev) => e.target.checked ? [...prev, l.id] : prev.filter((id) => id !== l.id));
+                  }} />
+                </TableCell>
                 <TableCell><SourceBadge source={l.source} /></TableCell>
                 <TableCell>{l.email}</TableCell>
                 <TableCell>
@@ -170,6 +221,10 @@ export const Leads = () => {
                   />
                 </TableCell>
                 <TableCell align="right">
+                  <Button size="small" variant={l.do_not_contact ? 'contained' : 'outlined'} color={l.do_not_contact ? 'warning' : 'inherit'} onClick={async () => {
+                    const res = await api.leadsUpdate(token!, l.id, { do_not_contact: !l.do_not_contact });
+                    if (res.ok) { toast.success(t('leads.updated')); await load(); } else { toast.error(t('leads.update_failed')); }
+                  }}>{l.do_not_contact ? (t('leads.dnc_on') || 'DNC On') : (t('leads.dnc_off') || 'DNC Off')}</Button>
                   <IconButton size="small" aria-label="edit" onClick={() => setEditing({ id: l.id, email: l.email })}><EditIcon fontSize="small" /></IconButton>
                   <IconButton size="small" aria-label="delete" onClick={() => setDeleting(l.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                 </TableCell>
@@ -203,6 +258,35 @@ export const Leads = () => {
         onClose={() => setCreateOpen(false)}
         onCreate={async (attrs) => { setCreateOpen(false); setPipelineId(attrs.pipeline_id); setEmail(attrs.email); await create({ preventDefault: () => {} } as any); }}
       />
+
+      <Card sx={{ mt: 2 }}>
+        <CardContent sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Button variant="outlined" onClick={() => setImportOpen(true)} startIcon={<CloudDownloadOutlinedIcon />}>{t('leads.import') || 'Import CSV'}</Button>
+        </CardContent>
+      </Card>
+
+      <Dialog open={importOpen} onClose={() => setImportOpen(false)}>
+        <DialogTitle>{t('leads.import') || 'Import CSV'}</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 420 }}>
+          <Typography variant="body2">{t('leads.import_hint') || 'Upload a CSV with headers (email, first_name, last_name, company, status, external_id, ...)'}</Typography>
+          <input type="file" accept=".csv,text/csv" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImportFile(f); }} />
+          <TextField label="CSV" multiline minRows={6} value={importCsv} onChange={(e) => setImportCsv(e.target.value)} />
+          <Stack direction="row" spacing={1}>
+            <TextField select size="small" label={t('leads.pipeline')} value={pipelineId as any} onChange={(e) => setPipelineId((e.target.value as any) || '')} sx={{ minWidth: 220 }}>
+              <MenuItem value="">—</MenuItem>
+              {pipelines.map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
+            </TextField>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setImportOpen(false)}>{t('common.cancel')}</Button>
+          <Button variant="contained" onClick={async () => {
+            if (!token || !importCsv.trim()) return;
+            const res = await api.leadsImport(token, importCsv, { pipeline_id: pipelineId || undefined });
+            if (res.ok) { toast.success(t('common.queued') || 'Queued'); setImportOpen(false); setImportCsv(''); } else { toast.error(t('leads.update_failed')); }
+          }}>{t('common.upload') || 'Upload'}</Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };

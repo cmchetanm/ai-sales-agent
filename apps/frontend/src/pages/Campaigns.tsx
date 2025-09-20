@@ -144,7 +144,19 @@ export const Campaigns = () => {
                     }}
                   />
                 </TableCell>
-                <TableCell align="right"> 
+                <TableCell align="right" sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}> 
+                  <Button size="small" variant="outlined" onClick={async () => {
+                    const res = await api.campaignsPreview(token!, c.id);
+                    if (res.ok && res.data) toast.info(`${t('campaigns.preview')}: ${res.data.target_count}`);
+                  }}>{t('campaigns.preview')}</Button>
+                  <Button size="small" variant="contained" onClick={async () => {
+                    const res = await api.campaignsStart(token!, c.id);
+                    if (res.ok) { toast.success(t('campaigns.started')); await load(); } else { toast.error(t('campaigns.update_failed')); }
+                  }}>{t('campaigns.start')}</Button>
+                  <Button size="small" variant="outlined" color="warning" onClick={async () => {
+                    const res = await api.campaignsPause(token!, c.id);
+                    if (res.ok) { toast.success(t('campaigns.paused')); await load(); } else { toast.error(t('campaigns.update_failed')); }
+                  }}>{t('campaigns.pause')}</Button>
                   <IconButton size="small" aria-label="edit" onClick={() => setEditing({ id: c.id, name: c.name, status: c.status })}><EditIcon fontSize="small" /></IconButton>
                   <IconButton size="small" aria-label="delete" onClick={() => setDeleting(c.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                 </TableCell>

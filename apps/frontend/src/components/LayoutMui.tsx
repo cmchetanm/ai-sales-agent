@@ -18,6 +18,8 @@ import {
   Stack,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import Tooltip from '@mui/material/Tooltip';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
@@ -31,7 +33,8 @@ import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { useAuth } from '../auth/AuthContext';
 import { ColorModeContext } from '../theme';
 import { useTranslation } from 'react-i18next';
-import { MenuItem, Select } from '@mui/material';
+import { Menu, MenuItem, Select } from '@mui/material';
+import TranslateIcon from '@mui/icons-material/Translate';
 import { useLocation, useParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { Aurora } from './Aurora';
@@ -50,6 +53,8 @@ export function LayoutMui() {
   const params = useParams();
   const currentLang = (params.lng || i18n.language || 'en').split('-')[0];
   const [lang, setLang] = useState(currentLang);
+  const compact = useMediaQuery(theme.breakpoints.down('sm'));
+  const [langAnchor, setLangAnchor] = useState<null | HTMLElement>(null);
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
   const logout = async () => { await signOut(); navigate(`/${lang}/login`); };
@@ -67,39 +72,62 @@ export function LayoutMui() {
         '& .MuiListItemButton-root': { borderRadius: 1, mx: 1, my: 0.5 },
         '& .Mui-selected': { background: 'linear-gradient(90deg, rgba(99,102,241,0.15), transparent)' }
       }}>
-        <NavItem baseLang={lang} to="/" icon={<DashboardIcon />} label={t('nav.dashboard')} />
-        <NavItem baseLang={lang} to="/pipelines" icon={<LanOutlinedIcon />} label={t('nav.pipelines')} />
-        <NavItem baseLang={lang} to="/chat" icon={<ChatBubbleOutlineIcon />} label={t('nav.chat')} />
-        <NavItem baseLang={lang} to="/leads" icon={<PeopleAltOutlinedIcon />} label={t('nav.leads')} />
-        <NavItem baseLang={lang} to="/campaigns" icon={<MailOutlineIcon />} label={t('nav.campaigns')} />
-        <NavItem baseLang={lang} to="/account" icon={<SettingsOutlinedIcon />} label={t('nav.account')} />
+        <NavItem compact={compact} baseLang={lang} to="/" icon={<DashboardIcon />} label={t('nav.dashboard')} />
+        <NavItem compact={compact} baseLang={lang} to="/pipelines" icon={<LanOutlinedIcon />} label={t('nav.pipelines')} />
+        <NavItem compact={compact} baseLang={lang} to="/chat" icon={<ChatBubbleOutlineIcon />} label={t('nav.chat')} />
+        <NavItem compact={compact} baseLang={lang} to="/leads" icon={<PeopleAltOutlinedIcon />} label={t('nav.leads')} />
+        <NavItem compact={compact} baseLang={lang} to="/campaigns" icon={<MailOutlineIcon />} label={t('nav.campaigns')} />
+        <NavItem compact={compact} baseLang={lang} to="/account" icon={<SettingsOutlinedIcon />} label={t('nav.account')} />
       </List>
       <Box sx={{ position: 'absolute', bottom: 8, left: 0, right: 0, px: 2 }}>
         <Divider sx={{ mb: 1 }} />
         <Box display="flex" alignItems="center" gap={1} justifyContent="space-between">
           <Typography variant="caption" color="text.secondary" noWrap>{user?.email}</Typography>
           <Stack direction="row" spacing={1} alignItems="center">
-            <Select
-              size="small"
-              value={lang}
-              onChange={async (e) => { const l = e.target.value as string; setLang(l); i18n.changeLanguage(l); const parts = location.pathname.split('/'); if (parts[1]) { parts[1] = l; } else { parts.splice(1, 0, l); } navigate(parts.join('/')); try { if (token) { const currentQ = (account as any)?.profile?.questionnaire || {}; await api.accountUpdate(token, { profile_attributes: { questionnaire: { ...currentQ, locale: l } } }); } } catch {} }}
-              variant="outlined"
-              displayEmpty
-              sx={{
-                minWidth: 72,
-                height: 32,
-                borderRadius: 2,
-                '& .MuiSelect-select': { py: 0.5, px: 1.5, display: 'flex', alignItems: 'center' },
-                '& .MuiOutlinedInput-notchedOutline': { borderColor: (t) => t.palette.divider },
-              }}
-            >
-              <MenuItem value="en">EN</MenuItem>
-              <MenuItem value="es">ES</MenuItem>
-              <MenuItem value="fr">FR</MenuItem>
-            </Select>
-            <Button size="small" startIcon={<LogoutIcon />} variant="outlined" onClick={logout} sx={{ height: 32 }}>
-              {t('app.logout')}
-            </Button>
+            {compact ? (
+              <>
+                <Tooltip title={t('app.logout')}>
+                  <IconButton size="small" onClick={logout}><LogoutIcon /></IconButton>
+                </Tooltip>
+                <Tooltip title="Language">
+                  <IconButton size="small" onClick={(e) => setLangAnchor(e.currentTarget)}><TranslateIcon /></IconButton>
+                </Tooltip>
+                <Menu anchorEl={langAnchor} open={Boolean(langAnchor)} onClose={() => setLangAnchor(null)}>
+                  {['en','es','fr'].map((code) => (
+                    <MenuItem key={code} selected={lang===code} onClick={async () => {
+                      setLang(code); i18n.changeLanguage(code);
+                      const parts = location.pathname.split('/'); parts[1] = code; navigate(parts.join('/'));
+                      try { if (token) { const currentQ = (account as any)?.profile?.questionnaire || {}; await api.accountUpdate(token, { profile_attributes: { questionnaire: { ...currentQ, locale: code } } }); } } catch {}
+                      setLangAnchor(null);
+                    }}>{code.toUpperCase()}</MenuItem>
+                  ))}
+                </Menu>
+              </>
+            ) : (
+              <>
+                <Select
+                  size="small"
+                  value={lang}
+                  onChange={async (e) => { const l = e.target.value as string; setLang(l); i18n.changeLanguage(l); const parts = location.pathname.split('/'); if (parts[1]) { parts[1] = l; } else { parts.splice(1, 0, l); } navigate(parts.join('/')); try { if (token) { const currentQ = (account as any)?.profile?.questionnaire || {}; await api.accountUpdate(token, { profile_attributes: { questionnaire: { ...currentQ, locale: l } } }); } } catch {} }}
+                  variant="outlined"
+                  displayEmpty
+                  sx={{
+                    minWidth: 72,
+                    height: 32,
+                    borderRadius: 2,
+                    '& .MuiSelect-select': { py: 0.5, px: 1.5, display: 'flex', alignItems: 'center' },
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: (t) => t.palette.divider },
+                  }}
+                >
+                  <MenuItem value="en">EN</MenuItem>
+                  <MenuItem value="es">ES</MenuItem>
+                  <MenuItem value="fr">FR</MenuItem>
+                </Select>
+                <Button size="small" startIcon={<LogoutIcon />} variant="outlined" onClick={logout} sx={{ height: 32 }}>
+                  {t('app.logout')}
+                </Button>
+              </>
+            )}
           </Stack>
         </Box>
       </Box>
@@ -150,17 +178,19 @@ export function LayoutMui() {
   );
 }
 
-function NavItem({ to, icon, label, baseLang }: { to: string; icon: React.ReactNode; label: string; baseLang?: string }) {
+function NavItem({ to, icon, label, baseLang, compact }: { to: string; icon: React.ReactNode; label: string; baseLang?: string; compact?: boolean }) {
   const lang = (baseLang || 'en').split('-')[0];
   const target = `/${lang}${to}`;
   return (
     <ListItem disablePadding>
       <NavLink to={target} end={to === '/'} style={{ width: '100%', textDecoration: 'none', color: 'inherit' }}>
         {({ isActive }) => (
-          <ListItemButton selected={isActive}>
-            <ListItemIcon>{icon}</ListItemIcon>
-            <ListItemText primary={label} />
-          </ListItemButton>
+          <Tooltip title={compact ? label : ''} placement="right">
+            <ListItemButton selected={isActive} sx={{ px: compact ? 1.25 : 2 }}>
+              <ListItemIcon sx={{ minWidth: compact ? 36 : 40 }}>{icon}</ListItemIcon>
+              {!compact && <ListItemText primary={label} />}
+            </ListItemButton>
+          </Tooltip>
         )}
       </NavLink>
     </ListItem>
