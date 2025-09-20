@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
 import { Button, Card, CardContent, IconButton, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel, Checkbox, Stack } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { toast } from 'sonner';
@@ -10,6 +11,7 @@ import { PaginationControls } from '../components/PaginationControls';
 import { SearchBar } from '../components/SearchBar';
 import { useQueryState } from '../hooks/useQueryState';
 import { CreateLeadDialog } from '../components/CreateLeadDialog';
+import { LeadDetailsDialog } from '../components/LeadDetailsDialog';
 import { useTranslation } from 'react-i18next';
 import { TableSkeletonRows } from '../components/TableSkeleton';
 import { StatusSelectChip } from '../components/StatusSelectChip';
@@ -35,6 +37,7 @@ export const Leads = () => {
   const [bulkPipelineId, setBulkPipelineId] = useState<number | ''>('' as any);
   const [importOpen, setImportOpen] = useState(false);
   const [importCsv, setImportCsv] = useState('');
+  const [details, setDetails] = useState<any | null>(null);
   const [importOwnerId, setImportOwnerId] = useState<number | ''>('' as any);
   const [page, setPage] = useQueryState('page', 1 as any, 'number');
   const [pages, setPages] = useState(0);
@@ -137,6 +140,13 @@ export const Leads = () => {
           </TextField>
           <SearchBar value={q} onChange={setQ} placeholder={t('leads.search')} />
           <Button variant="contained" startIcon={<PersonAddAltOutlinedIcon />} onClick={() => setCreateOpen(true)}>{t('leads.new')}</Button>
+          <Button variant="outlined" onClick={async () => {
+            if (!token) return;
+            const blob = await api.leadsExport(token, { pipeline_id: pipelineId || undefined, status: status || undefined, assigned_user_id: ownerId || undefined, q, order_by: orderBy, order });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'leads-export.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+          }}>{t('common.export') || 'Export CSV'}</Button>
           <Button variant="outlined" startIcon={<CloudDownloadOutlinedIcon />} onClick={async () => {
             if (!token) return;
             toast.info('Discovering leads…');
@@ -257,6 +267,7 @@ export const Leads = () => {
                     const res = await api.leadsUpdate(token!, l.id, { do_not_contact: !l.do_not_contact });
                     if (res.ok) { toast.success(t('leads.updated')); await load(); } else { toast.error(t('leads.update_failed')); }
                   }}>{l.do_not_contact ? (t('leads.dnc_on') || 'DNC On') : (t('leads.dnc_off') || 'DNC Off')}</Button>
+                  <IconButton size="small" aria-label="view" onClick={() => setDetails(l)}><InfoOutlinedIcon fontSize="small" /></IconButton>
                   <IconButton size="small" aria-label="edit" onClick={() => setEditing({ id: l.id, email: l.email, first_name: l.first_name, last_name: l.last_name, company: l.company, job_title: l.job_title, location: l.location, phone: l.phone, linkedin_url: l.linkedin_url, website: l.website })}><EditIcon fontSize="small" /></IconButton>
                   <IconButton size="small" aria-label="delete" onClick={() => setDeleting(l.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                 </TableCell>
@@ -307,6 +318,8 @@ export const Leads = () => {
         onClose={() => setCreateOpen(false)}
         onCreate={async (attrs) => { setCreateOpen(false); if (!token) return; const res = await api.leadsCreate(token, attrs); if (res.ok) { toast.success(t('leads.created') || 'Created'); await load(); } else { toast.error(t('leads.update_failed')); } }}
       />
+
+      <LeadDetailsDialog open={!!details} onClose={() => setDetails(null)} lead={details || {}} />
 
       <Card sx={{ mt: 2 }}>
         <CardContent sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>

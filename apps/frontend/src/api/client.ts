@@ -82,6 +82,15 @@ export const api = {
     {},
     token
   ),
+  leadsExport: async (token: string, params: Record<string, any> = {}): Promise<Blob> => {
+    const url = apiUrl(`/api/v1/leads/export${toQS(params)}`);
+    const headers: Record<string, string> = { Accept: 'text/csv' };
+    try { headers['Accept-Language'] = (i18n as any)?.language?.split('-')[0] || 'en'; } catch {}
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+    return await res.blob();
+  },
   leadsCreate: (token: string, attrs: any) => request<{ lead: any }>(
     '/api/v1/leads',
     { method: 'POST', body: JSON.stringify({ lead: attrs }) },
@@ -90,6 +99,16 @@ export const api = {
   leadsUpdate: (token: string, id: number, attrs: any) => request<{ lead: any }>(
     `/api/v1/leads/${id}`,
     { method: 'PATCH', body: JSON.stringify({ lead: attrs }) },
+    token
+  ),
+  leadsActivitiesIndex: (token: string, leadId: number, params: Record<string, any> = {}) => request<{ activities: any[]; pagination?: any }>(
+    `/api/v1/leads/${leadId}/activities${toQS(params)}`,
+    {},
+    token
+  ),
+  leadsActivitiesCreate: (token: string, leadId: number, attrs: any) => request<{ activity: any }>(
+    `/api/v1/leads/${leadId}/activities`,
+    { method: 'POST', body: JSON.stringify({ activity: attrs }) },
     token
   ),
   leadsDelete: (token: string, id: number) => request<void>(

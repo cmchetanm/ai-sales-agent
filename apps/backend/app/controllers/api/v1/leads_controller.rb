@@ -54,6 +54,36 @@ module Api
         head :no_content
       end
 
+      # GET /api/v1/leads/export
+      def export
+        authorize Lead, :index?
+        scope = policy_scope(current_account.leads)
+        scope = apply_filters(scope)
+        csv = CSV.generate(headers: true) do |out|
+          out << %w[email first_name last_name company job_title location phone linkedin_url website status assigned_user_email score last_contacted_at source]
+          scope.find_each do |l|
+            out << [
+              l.email,
+              l.first_name,
+              l.last_name,
+              l.company,
+              l.job_title,
+              l.location,
+              l.phone,
+              l.linkedin_url,
+              l.website,
+              l.status,
+              l.assigned_user&.email,
+              l.score,
+              l.last_contacted_at&.iso8601,
+              l.source
+            ]
+          end
+        end
+        filename = "leads-#{Time.current.utc.strftime('%Y%m%d-%H%M%S')}.csv"
+        send_data csv, filename:, type: 'text/csv; charset=utf-8'
+      end
+
       # PATCH /api/v1/leads/bulk_update
       def bulk_update
         authorize Lead, :update?

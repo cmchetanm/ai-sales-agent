@@ -22,6 +22,7 @@ export default defineConfig({
         'src/theme.tsx', 'src/App.tsx', 'src/main.tsx',
         'src/components/Layout*.tsx', 'src/components/NavBar.tsx',
         'src/components/CreateLeadDialog.tsx',
+        'src/components/LeadDetailsDialog.tsx',
         'src/api/client.ts'
       ],
       thresholds: { lines: 80, statements: 80, functions: 55, branches: 60 }

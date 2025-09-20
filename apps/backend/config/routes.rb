@@ -48,6 +48,7 @@ Rails.application.routes.draw do
           collection do
             post :import
             patch :bulk_update
+            get :export
           end
         end
         resources :campaigns do
@@ -102,6 +103,7 @@ Rails.application.routes.draw do
         collection do
           post :import
           patch :bulk_update
+          get :export
         end
       end
       resources :leads do
