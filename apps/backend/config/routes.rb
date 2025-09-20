@@ -57,6 +57,7 @@ Rails.application.routes.draw do
             post :pause
           end
         end
+        resources :users, only: [:index]
         resources :chat_sessions, only: %i[create show] do
           resources :messages, only: %i[index create], controller: 'chat_messages'
         end
@@ -118,6 +119,7 @@ Rails.application.routes.draw do
           post :pause
         end
       end
+      resources :users, only: [:index]
       resources :chat_sessions, only: %i[create show] do
         resources :messages, only: %i[index create], controller: 'chat_messages'
       end

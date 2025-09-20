@@ -19,6 +19,7 @@ class LeadSerializer < ApplicationSerializer
       linkedin_url: resource.linkedin_url,
       website: resource.website,
       assigned_user_id: resource.assigned_user_id,
+      assigned_user: resource.assigned_user&.slice(:id, :email, :first_name, :last_name),
       do_not_contact: resource.do_not_contact,
       email_opt_out_at: resource.email_opt_out_at,
       score: resource.score,
