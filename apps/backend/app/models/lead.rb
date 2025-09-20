@@ -34,6 +34,13 @@ class Lead < ApplicationRecord
 
   def enqueue_score
     LeadScoreJob.perform_later(lead_id: id)
+  rescue StandardError => e
+    Rails.logger.warn("LeadScoreJob enqueue failed: #{e.class}: #{e.message}. Running inline.")
+    begin
+      LeadScoreJob.perform_now(lead_id: id)
+    rescue StandardError => inner
+      Rails.logger.error("LeadScoreJob inline failed: #{inner.class}: #{inner.message}")
+    end
   end
 
   def assigned_user_must_belong_to_account
