@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
 import { Button, Card, CardContent, IconButton, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel, Checkbox, Stack } from '@mui/material';
@@ -26,7 +26,6 @@ export const Leads = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [pipelineId, setPipelineId] = useState<number | ''>('' as any);
   const [ownerId, setOwnerId] = useState<number | ''>('' as any);
-  const [email, setEmail] = useState('lead@example.com');
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<{ id: number; email: string } | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
@@ -72,14 +71,7 @@ export const Leads = () => {
 
   useEffect(() => { load(page || 1); }, [token, pipelineId, ownerId]);
 
-  const create = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!token || !pipelineId) return;
-    setLoading(true);
-    const res = await api.leadsCreate(token, { pipeline_id: pipelineId, email, status: 'new' });
-    setLoading(false);
-    if (res.ok) await load();
-  };
+  // Quick email-create removed; use New dialog instead
 
   const bulkApply = async (type: 'status' | 'pipeline') => {
     if (!token || selected.length === 0) return;
@@ -165,12 +157,7 @@ export const Leads = () => {
           </CardContent>
         </Card>
       )}
-      <Card sx={{ mb: 2 }}>
-        <CardContent sx={{ display: 'flex', gap: 1 }}>
-          <TextField size="small" label={t('leads.email')} value={email} onChange={(e) => setEmail(e.target.value)} />
-          <Button variant="contained" disabled={loading || !pipelineId} onClick={create as any}>{t('leads.create_lead')}</Button>
-        </CardContent>
-      </Card>
+      {/* Removed quick email-create bar */}
       {selected.length > 0 && (
         <Card sx={{ mb: 1 }}>
           <CardContent sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>

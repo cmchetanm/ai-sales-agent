@@ -33,7 +33,7 @@ help:
 	@echo "  make backend-test                 # Run backend API test suite"
 	@echo "  make emailing-test                # Run emailing service test suite"
 	@echo "  make frontend-test                # Install deps & run frontend checks"
-	@echo "  make test-all                     # Run all available test suites"
+	@echo "  make test                         # Run all available test suites"
 	@echo "  make lint                         # Run all linters (placeholder)"
 
 bootstrap:
@@ -91,7 +91,10 @@ frontend-test:
 	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
 	@$(DOCKER_COMPOSE) run --rm $(FRONTEND_SERVICE) sh -lc "pnpm install --no-frozen-lockfile && pnpm run test:ci"
 
-test-all: backend-test emailing-test llm-test frontend-test
+test: backend-test emailing-test frontend-test
+
+# Back-compat alias
+test-all: test
 
 clean:
 	@$(DOCKER_COMPOSE) down -v --remove-orphans
