@@ -15,7 +15,8 @@ module Api
         user_msg = session.chat_messages.create!(sender_type: 'User', content: message_params[:content], sent_at: Time.current)
 
         llm = ::Ai::LlmClient.new
-        context = session.chat_messages.order(:created_at).limit(20).map do |m|
+        # Use the most recent 20 messages, kept in chronological order
+        context = session.chat_messages.order(created_at: :desc).limit(20).reverse.map do |m|
           { role: m.sender_type == 'User' ? 'user' : 'assistant', content: m.content.to_s }
         end
         reply = llm.reply(session_id: session.id, account_id: current_account.id, user_id: current_user&.id, messages: context)

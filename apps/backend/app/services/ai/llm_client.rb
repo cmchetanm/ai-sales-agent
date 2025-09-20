@@ -19,7 +19,14 @@ module Ai
         user_id: user_id,
         messages: messages.map { |m| { role: m[:role], content: m[:content].to_s } }
       }
-      resp = @conn.post('/chat/messages', payload)
+      resp = @conn.post('/chat/messages', payload) do |req|
+        # Propagate locale so the LLM service can localize replies
+        begin
+          req.headers['Accept-Language'] = I18n.locale.to_s
+        rescue StandardError
+          # ignore if I18n not available in context
+        end
+      end
       return resp.body.fetch('reply') if resp.success?
 
       # Gracefully degrade on validation/422 or other non-200s
