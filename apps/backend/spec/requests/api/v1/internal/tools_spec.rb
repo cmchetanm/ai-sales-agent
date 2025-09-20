@@ -29,5 +29,13 @@ RSpec.describe 'API V1 Internal Tools', type: :request do
   ensure
     ActiveJob::Base.queue_adapter = :inline
   end
-end
 
+  it 'accepts email events to update status and metrics' do
+    campaign = create(:campaign, account: account, channel: 'email', status: 'running')
+    lead = create(:lead, account: account, pipeline: create(:pipeline, account: account))
+    msg = account.email_messages.create!(campaign: campaign, lead: lead, status: 'queued', direction: 'outbound', subject: 'x', body_text: 'y')
+    post '/api/v1/internal/email_event', headers: { 'X-Internal-Token' => token }, params: { message_id: msg.id, status: 'replied' }
+    expect(response).to have_http_status(:ok)
+    expect(msg.reload.status).to eq('replied')
+  end
+end

@@ -75,6 +75,7 @@ Rails.application.routes.draw do
         namespace :internal do
           post 'profile_update', to: 'tools#profile_update'
           post 'apollo_fetch', to: 'tools#apollo_fetch'
+          post 'email_event', to: 'tools#email_event'
         end
         resource :account, only: %i[show update]
 
@@ -141,6 +142,7 @@ Rails.application.routes.draw do
         post 'profile_update', to: 'tools#profile_update'
         post 'apollo_fetch', to: 'tools#apollo_fetch'
         post 'discover_leads', to: 'tools#discover_leads'
+        post 'email_event', to: 'tools#email_event'
       end
       resource :account, only: %i[show update]
       namespace :auth do

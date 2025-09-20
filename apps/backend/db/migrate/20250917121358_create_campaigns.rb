@@ -7,6 +7,7 @@ class CreateCampaigns < ActiveRecord::Migration[7.1]
       t.string :channel, null: false
       t.string :status, null: false, default: 'draft'
       t.jsonb :audience_filters, null: false, default: {}
+      t.jsonb :sequence, null: false, default: []
       t.jsonb :schedule, null: false, default: {}
       t.jsonb :metrics, null: false, default: {}
       t.timestamps

@@ -66,9 +66,10 @@ module Integrations
         linkedin = p['linkedin_url'] || p['linkedin_profile_url'] || p.dig('organization', 'linkedin_url')
         company_size = p.dig('organization', 'estimated_num_employees') || p.dig('company', 'employee_count')
         revenue = p.dig('organization', 'annual_revenue') || p.dig('company', 'revenue')
+        industry = p.dig('organization', 'industry') || p.dig('company', 'industry')
 
         out = { first_name: first_name, last_name: last_name, email: email, company: org_name, job_title: title, linkedin_url: linkedin,
-                enrichment: { company_size:, revenue: }.compact, source: 'apollo' }.compact
+                enrichment: { company_size:, revenue:, industry: }.compact, source: 'apollo' }.compact
         out if out[:first_name] || out[:last_name] || out[:email]
       end
       return mapped if mapped.any?

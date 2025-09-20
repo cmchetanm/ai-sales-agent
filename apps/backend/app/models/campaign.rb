@@ -13,6 +13,11 @@ class Campaign < ApplicationRecord
   validates :channel, inclusion: { in: CHANNELS }
   validates :status, inclusion: { in: STATUSES }
 
+  # Accessor for sequence JSONB (for older records without column in test schema)
+  def sequence
+    self[:sequence] || []
+  end
+
   # Build target leads scope from audience_filters and pipeline
   def target_scope
     scope = account.leads
@@ -23,6 +28,18 @@ class Campaign < ApplicationRecord
     end
     if f['assigned_user_id'].present?
       scope = scope.where(assigned_user_id: f['assigned_user_id'])
+    end
+    if f['industries'].present?
+      inds = Array(f['industries']).map { |x| x.to_s.downcase }
+      scope = scope.where("LOWER((enrichment->>'industry')) IN (?)", inds)
+    end
+    if f['roles'].present?
+      roles = Array(f['roles']).map { |x| "%#{x.to_s.downcase}%" }
+      scope = scope.where('LOWER(job_title) LIKE ANY (ARRAY[?])', roles)
+    end
+    if f['locations'].present?
+      locs = Array(f['locations']).map { |x| "%#{x.to_s.downcase}%" }
+      scope = scope.where('LOWER(location) LIKE ANY (ARRAY[?])', locs)
     end
     if f['q'].present?
       q = "%#{f['q'].to_s.downcase}%"
