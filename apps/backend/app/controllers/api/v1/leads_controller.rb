@@ -91,6 +91,18 @@ module Api
       def apply_filters(scope)
         scope = scope.where(pipeline_id: params[:pipeline_id]) if params[:pipeline_id].present?
         scope = scope.where(status: params[:status]) if params[:status].present?
+        scope = scope.where(source: params[:source]) if params[:source].present?
+        scope = scope.where('company ILIKE ?', "%#{params[:company].to_s.strip}%") if params[:company].present?
+        if params[:updated_after].present?
+          if (t = safe_time(params[:updated_after]))
+            scope = scope.where('updated_at >= ?', t)
+          end
+        end
+        if params[:updated_before].present?
+          if (t = safe_time(params[:updated_before]))
+            scope = scope.where('updated_at <= ?', t)
+          end
+        end
         if params[:q].present?
           q = "%#{params[:q].to_s.downcase}%"
           scope = scope.where(
@@ -104,12 +116,19 @@ module Api
       def apply_sort(scope)
         order_by = params[:order_by].presence || 'created_at'
         direction = params[:order].to_s.downcase == 'asc' ? :asc : :desc
-        allowed = %w[email status created_at updated_at company score]
+        allowed = %w[email status created_at updated_at company score last_contacted_at first_name]
         if allowed.include?(order_by)
           scope.reorder(order_by => direction)
         else
           scope.order(created_at: :desc)
         end
+      end
+
+      def safe_time(val)
+        s = val.to_s
+        Time.zone.parse(s)
+      rescue ArgumentError, TypeError
+        nil
       end
     end
   end

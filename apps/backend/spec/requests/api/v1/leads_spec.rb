@@ -39,4 +39,26 @@ RSpec.describe 'API V1 Leads', type: :request do
       expect(response).to have_http_status(:forbidden)
     end
   end
+
+  describe 'Filters and sorting' do
+    let!(:lead_a) { create(:lead, account:, pipeline:, email: 'a@example.com', company: 'Alpha', status: 'new', score: 10) }
+    let!(:lead_b) { create(:lead, account:, pipeline:, email: 'b@example.com', company: 'Beta', status: 'responded', score: 90, last_contacted_at: 1.day.ago) }
+    let!(:lead_c) { create(:lead, account:, pipeline:, email: 'c@example.com', company: 'Gamma', status: 'outreach', score: 50) }
+
+    it 'searches by q across email/company and filters by status' do
+      get "/api/v1/leads", headers: auth_headers(user), params: { q: 'beta', status: 'responded' }
+      expect(response).to have_http_status(:ok)
+      emails = json_body['leads'].map { |l| l['email'] }
+      expect(emails).to eq(['b@example.com'])
+    end
+
+    it 'sorts by score desc and supports updated bounds' do
+      lead_a.update!(updated_at: 3.days.ago)
+      lead_b.update!(updated_at: 1.day.ago)
+      get "/api/v1/leads", headers: auth_headers(user), params: { order_by: 'score', order: 'desc', updated_after: 4.days.ago.iso8601 }
+      expect(response).to have_http_status(:ok)
+      emails = json_body['leads'].map { |l| l['email'] }
+      expect(emails.first).to eq('b@example.com')
+    end
+  end
 end
