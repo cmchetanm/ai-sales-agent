@@ -39,7 +39,11 @@ Rails.application.routes.draw do
       namespace :v1 do
         resource :health, only: [:show], controller: :health
         resources :plans, only: [:index]
-        resources :pipelines
+        resources :pipelines do
+          member do
+            get :stats
+          end
+        end
         resources :leads do
           collection do
             post :import
@@ -88,7 +92,11 @@ Rails.application.routes.draw do
     namespace :v1 do
       resource :health, only: [:show], controller: :health
       resources :plans, only: [:index]
-      resources :pipelines
+      resources :pipelines do
+        member do
+          get :stats
+        end
+      end
       resources :leads do
         collection do
           post :import

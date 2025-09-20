@@ -50,6 +50,13 @@ module Api
         head :no_content
       end
 
+      # GET /api/v1/pipelines/:id/stats
+      def stats
+        pipeline = current_account.pipelines.find(params[:id])
+        authorize pipeline, :show?
+        render json: { pipeline_id: pipeline.id, stage_stats: pipeline.stage_stats, status_counts: pipeline.status_counts }
+      end
+
       private
 
       def pipeline_params
