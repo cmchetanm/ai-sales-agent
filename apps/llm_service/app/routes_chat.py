@@ -69,7 +69,7 @@ def _post_internal(path: str, payload: Dict) -> bool:
     try:
         with httpx.Client(timeout=5.0) as c:
             r = c.post(f"{base}{path}", headers={"X-Internal-Token": token}, json=payload)
-            return r.status_code < 400
+            return 200 <= r.status_code < 400
     except Exception:
         return False
 
@@ -84,14 +84,21 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
     if last_user:
         filters = _extract_filters(last_user)
         # Save profile free text
-        _post_internal(
+        profile_ok = _post_internal(
             "/api/v1/internal/profile_update",
             {"account_id": req.account_id, "profile": {"questionnaire": {"free_text": last_user}}},
         )
         if any(filters.values()):
-            _post_internal(
+            queued = _post_internal(
                 "/api/v1/internal/discover_leads",
                 {"account_id": req.account_id, "filters": filters},
             )
-            reply = t('saved_and_fetching', locale)
+            if queued:
+                reply = t('saved_and_fetching', locale)
+            elif not profile_ok:
+                # Give a helpful, actionable hint when internal token is missing
+                reply = (
+                    "I couldn't start the search yet — a required internal token is missing. "
+                    "Please set INTERNAL_API_TOKEN in your environment and try again."
+                )
     return ChatResponse(reply=reply, session_id=req.session_id)

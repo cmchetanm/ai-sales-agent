@@ -61,3 +61,10 @@ Detailed setup instructions will be added as the individual services are impleme
 ### Security
 
 - Rate limiting via Rack::Attack is enabled in production and can be toggled locally with `RACK_ATTACK_ENABLED=true` in `ops/env/.env.development`.
+
+### Troubleshooting: Chat agent not fetching leads
+
+- If the chat replies "saved your preferences and started fetching leads" but no leads appear, ensure internal auth is configured.
+- Set `INTERNAL_API_TOKEN` in `ops/env/.env.development` (a non-empty value), and restart the stack (`make down ENV=development && make up ENV=development`).
+- The LLM service posts to the backend's internal tools endpoints using this token. Without it, discovery jobs are not queued.
+- Optionally verify by hitting `POST /api/v1/internal/discover_leads` with header `X-Internal-Token: <your token>`.

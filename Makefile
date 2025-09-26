@@ -32,6 +32,7 @@ help:
 	@echo "  make db-prepare                   # Run database migrations/seeds"
 	@echo "  make backend-test                 # Run backend API test suite"
 	@echo "  make emailing-test                # Run emailing service test suite"
+	@echo "  make emailing-dispatch            # Trigger emailing dispatcher once"
 	@echo "  make frontend-test                # Install deps & run frontend checks"
 	@echo "  make test                         # Run all available test suites"
 	@echo "  make lint                         # Run all linters (placeholder)"
@@ -83,6 +84,10 @@ backend-test:
 emailing-test:
 	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
 	@$(DOCKER_COMPOSE) run --rm -e RAILS_ENV=test $(EMAILING_SERVICE) bash -lc "(bundle check || bundle install) && bundle exec rails db:prepare && bundle exec rspec"
+
+emailing-dispatch:
+	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
+	@$(DOCKER_COMPOSE) run --rm $(EMAILING_SERVICE) bash -lc "bundle exec rails runner 'EmailDispatcherJob.perform_now'"
 
 llm-test:
 	@echo "TODO: add python test command (pytest) once implemented"
