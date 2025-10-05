@@ -262,6 +262,18 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
                     st["step"] = "collecting"
                     created = body.get("created") if isinstance(body, dict) else None
                     extra = f" ({created} new leads)" if isinstance(created, int) else ""
+                    # If we have a sample of leads, push a follow-up assistant message to the chat
+                    sample = body.get("sample") if isinstance(body, dict) else None
+                    if isinstance(sample, list) and sample:
+                        bullets = []
+                        for r in sample[:5]:
+                            name = ((r.get('first_name') or '') + ' ' + (r.get('last_name') or '')).strip()
+                            line = f"- {name or '(No name)'} — {r.get('company') or ''} — {r.get('email') or ''}"
+                            bullets.append(line)
+                        _post_internal(
+                            "/api/v1/internal/chat_notify",
+                            {"account_id": req.account_id, "chat_session_id": req.session_id, "content": "New leads found:\n" + "\n".join(bullets)},
+                        )
                     return ChatResponse(reply=t('fetching_more', locale) + extra, session_id=req.session_id)
                 if duplicate or (time.time() - st.get("discover_ts", 0)) < _DISCOVERY_TTL_SECONDS:
                     return ChatResponse(reply="On it — already fetching from external sources.", session_id=req.session_id)
@@ -274,6 +286,17 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
                     st["step"] = "collecting"
                     created = body.get("created") if isinstance(body, dict) else None
                     extra = f" ({created} new leads)" if isinstance(created, int) else ""
+                    sample = body.get("sample") if isinstance(body, dict) else None
+                    if isinstance(sample, list) and sample:
+                        bullets = []
+                        for r in sample[:5]:
+                            name = ((r.get('first_name') or '') + ' ' + (r.get('last_name') or '')).strip()
+                            line = f"- {name or '(No name)'} — {r.get('company') or ''} — {r.get('email') or ''}"
+                            bullets.append(line)
+                        _post_internal(
+                            "/api/v1/internal/chat_notify",
+                            {"account_id": req.account_id, "chat_session_id": req.session_id, "content": "New leads found:\n" + "\n".join(bullets)},
+                        )
                     return ChatResponse(reply=t('fetching_more', locale) + extra, session_id=req.session_id)
                 if duplicate or (time.time() - st.get("discover_ts", 0)) < _DISCOVERY_TTL_SECONDS:
                     return ChatResponse(reply="On it — already fetching from external sources.", session_id=req.session_id)

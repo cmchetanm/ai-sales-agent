@@ -85,6 +85,7 @@ Rails.application.routes.draw do
         post 'apollo_fetch', to: 'tools#apollo_fetch'
         post 'db_preview_leads', to: 'tools#db_preview_leads'
         post 'close_chat', to: 'tools#close_chat'
+        post 'chat_notify', to: 'tools#chat_notify'
         post 'email_event', to: 'tools#email_event'
       end
         resource :account, only: %i[show update]
@@ -162,6 +163,7 @@ Rails.application.routes.draw do
         post 'discover_leads', to: 'tools#discover_leads'
         post 'db_preview_leads', to: 'tools#db_preview_leads'
         post 'close_chat', to: 'tools#close_chat'
+        post 'chat_notify', to: 'tools#chat_notify'
         post 'email_event', to: 'tools#email_event'
       end
       resource :account, only: %i[show update]

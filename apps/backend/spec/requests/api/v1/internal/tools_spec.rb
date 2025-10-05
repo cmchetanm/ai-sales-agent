@@ -59,4 +59,11 @@ RSpec.describe 'API V1 Internal Tools', type: :request do
     expect(response).to have_http_status(:ok)
     expect(session.reload.status).to eq('completed')
   end
+
+  it 'notifies chat with assistant message' do
+    session = account.chat_sessions.create!(status: 'active')
+    post '/api/v1/internal/chat_notify', headers: { 'X-Internal-Token' => token }, params: { account_id: account.id, chat_session_id: session.id, content: 'Hello results' }
+    expect(response).to have_http_status(:ok)
+    expect(session.chat_messages.where(sender_type: 'Assistant', content: 'Hello results').count).to eq(1)
+  end
 end

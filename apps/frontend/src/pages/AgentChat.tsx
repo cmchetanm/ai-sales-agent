@@ -20,6 +20,7 @@ export const AgentChat = () => {
   const listRef = useRef<HTMLDivElement>(null);
   const [showScroll, setShowScroll] = useState(false);
   const { t } = useTranslation();
+  const POLL_MS = Number(((import.meta as any).env?.VITE_CHAT_POLL_MS as string) || 3000);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -56,6 +57,28 @@ export const AgentChat = () => {
     init();
   }, [token]);
 
+  // Poll for new messages so chat updates in real time when the agent
+  // posts follow-ups (e.g., after background discovery finishes).
+  useEffect(() => {
+    let timer: number | undefined;
+    if (token && sessionId) {
+      const tick = async () => {
+        const resp = await api.chatMessagesIndex(token, sessionId);
+        if (resp.ok && resp.data) {
+          const serverMsgs = (resp.data.messages || []) as ChatMsg[];
+          // Only update if changed in length or content to avoid extra renders
+          const changed = serverMsgs.length !== messages.length || serverMsgs[serverMsgs.length - 1]?.content !== messages[messages.length - 1]?.content;
+          if (changed) setMessages(serverMsgs);
+        }
+      };
+      // Initial refresh then start interval
+      tick();
+      // @ts-ignore
+      timer = window.setInterval(tick, POLL_MS);
+    }
+    return () => { if (timer) window.clearInterval(timer); };
+  }, [token, sessionId]);
+
   // Persist last session id locally to allow resuming chats
   useEffect(() => {
     if (sessionId) localStorage.setItem('last_chat_session_id', String(sessionId));
@@ -66,6 +89,8 @@ export const AgentChat = () => {
     const content = input.trim();
     setInput('');
     setSending(true);
+    // Let the server be source of truth; we optimistically push the user bubble
+    // and then the poll will replace the set with server messages shortly.
     const stamp = new Date().toLocaleTimeString();
     setMessages((prev) => [...prev, { role: 'user', content, sent_at: stamp }]);
     const res = await api.chatMessagesCreate(token, sessionId, content);

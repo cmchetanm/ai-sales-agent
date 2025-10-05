@@ -28,14 +28,25 @@ module Api
         sync = ActiveModel::Type::Boolean.new.cast(params[:sync]) ||
                (Rails.env.development? && ActiveModel::Type::Boolean.new.cast(ENV.fetch('INTERNAL_SYNC_JOBS', 'false')))
         if sync
-          before = account.leads.count
+          before_time = Time.current
           LeadDiscoveryJob.perform_now(account_id: account.id, filters:)
-          after = account.leads.count
-          render json: { status: 'ok', mode: 'sync', created: [after - before, 0].max }, status: :ok
+          created_scope = account.leads.where('created_at >= ?', before_time)
+          sample = created_scope.limit(5).map { |l| { first_name: l.first_name, last_name: l.last_name, email: l.email, company: l.company } }
+          render json: { status: 'ok', mode: 'sync', created: created_scope.count, sample: sample }, status: :ok
         else
           LeadDiscoveryJob.perform_later(account_id: account.id, filters:)
           render json: { status: 'queued' }, status: :accepted
         end
+      end
+
+      # POST /api/v1/internal/chat_notify
+      # params: { account_id, chat_session_id, content }
+      def chat_notify
+        account = Account.find(params.require(:account_id))
+        session = account.chat_sessions.find(params.require(:chat_session_id))
+        content = params.require(:content)
+        msg = session.chat_messages.create!(sender_type: 'Assistant', content: content.to_s, sent_at: Time.current)
+        render json: { status: 'ok', message_id: msg.id }
       end
 
       # Synchronous DB preview search (no external vendors)
