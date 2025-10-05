@@ -23,6 +23,7 @@ RESOURCES: Dict[str, Dict[str, str]] = {
         'db_satisfied': 'Are you satisfied with these results? Reply yes to close, or no to fetch more from external sources.',
         'closing': 'Great — closing this chat. You can start a new session anytime.',
         'fetching_more': 'Understood — fetching more via external sources now.',
+        'db_empty_offer_external': 'I could not find matches in your database for that request. Should I search external sources instead? Reply yes to proceed or no to adjust filters.',
     },
     'es': {
         'system_prompt': (
@@ -45,6 +46,7 @@ RESOURCES: Dict[str, Dict[str, str]] = {
         'db_satisfied': '¿Te satisfacen estos resultados? Responde sí para cerrar, o no para buscar más fuentes externas.',
         'closing': 'Perfecto — cierro este chat. Puedes iniciar otro cuando quieras.',
         'fetching_more': 'Entendido — buscando más con fuentes externas ahora.',
+        'db_empty_offer_external': 'No encontré resultados en tu base de datos para esa búsqueda. ¿Busco en fuentes externas? Responde sí para continuar o no para ajustar filtros.',
     },
     'fr': {
         'system_prompt': (
@@ -67,6 +69,7 @@ RESOURCES: Dict[str, Dict[str, str]] = {
         'db_satisfied': 'Êtes-vous satisfait ? Répondez oui pour clôturer, ou non pour chercher davantage via des sources externes.',
         'closing': 'Parfait — je clôture cette discussion. Vous pouvez en démarrer une nouvelle à tout moment.',
         'fetching_more': 'Compris — je récupère davantage via des sources externes.',
+        'db_empty_offer_external': "Je n’ai trouvé aucun résultat dans votre base de données. Voulez-vous chercher via des sources externes ? Répondez oui pour continuer ou non pour ajuster les filtres.",
     },
 }
 

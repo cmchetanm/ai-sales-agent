@@ -96,7 +96,7 @@ _SESSION_STATE: dict[str, dict] = {}
 def _get_state(session_id: str) -> dict:
     st = _SESSION_STATE.get(session_id)
     if not st:
-        st = {"step": "collecting"}
+        st = {"step": "collecting", "discover_ts": 0.0, "last_filters": {}}
         _SESSION_STATE[session_id] = st
     return st
 
@@ -246,12 +246,15 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
         if any(w in lower for w in ["yes", "looks good", "good", "great", "satisfied", "close", "done"]):
             _post_internal("/api/v1/internal/close_chat", {"account_id": req.account_id, "chat_session_id": req.session_id})
             return ChatResponse(reply=t('closing', locale), session_id=req.session_id)
-        if any(w in lower for w in ["no", "more", "not enough", "find more", "keep searching"]):
-            # Queue external sources now
-            history_filters = _extract_filters_from_messages([m.model_dump() for m in req.messages])
+        if any(w in lower for w in ["no", "more", "not enough", "find more", "keep searching", "external", "fetch more"]):
+            # Queue external sources now, but suppress repeats for a short window
+            history_filters = st.get("last_filters") or _extract_filters_from_messages([m.model_dump() for m in req.messages])
             queued, duplicate, queued_status = _queue_discovery_once(req.account_id, req.session_id, history_filters)
-            if queued:
+            if queued and not duplicate:
+                st["discover_ts"] = time.time()
                 return ChatResponse(reply=t('fetching_more', locale), session_id=req.session_id)
+            if duplicate or (time.time() - st.get("discover_ts", 0)) < _DISCOVERY_TTL_SECONDS:
+                return ChatResponse(reply="On it — already fetching from external sources.", session_id=req.session_id)
             # fall through to regular handling if not queued
     if last_user:
         filters = _extract_filters(last_user)
@@ -274,6 +277,8 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
             if ok and isinstance(data, dict):
                 total = data.get("total", 0)
                 rows = data.get("results", [])
+                st["last_filters"] = filters
+                st["step"] = "await_confirmation"
                 if total and rows:
                     bullets = []
                     for r in rows[:5]:
@@ -281,22 +286,9 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
                         line = f"- {name or '(No name)'} — {r.get('company') or ''} — {r.get('email') or ''}"
                         bullets.append(line)
                     reply = t('db_preview_intro', locale) + "\n" + "\n".join(bullets) + "\n" + t('db_satisfied', locale)
-                    st["step"] = "await_confirmation"
                     return ChatResponse(reply=reply, session_id=req.session_id)
-            # If no DB results, queue discovery (external) once
-            queued, duplicate, queued_status = _queue_discovery_once(req.account_id, req.session_id, filters)
-            if queued:
-                reply = t('saved_and_fetching', locale)
-            else:
-                # Provide more specific guidance depending on failure type
-                if queued_status == 403 or profile_status == 403 or profile_status == 0:
-                    reply = (
-                        "I couldn't start the search — the internal token is invalid or missing. "
-                        "Set the same INTERNAL_API_TOKEN for both backend and LLM, then restart."
-                    )
-                elif queued_status == -1:
-                    reply = (
-                        "I couldn't reach the backend from the LLM service. "
-                        "Check BACKEND_INTERNAL_URL and container networking, then retry."
-                    )
+                else:
+                    # No DB results; ask whether to search external instead of auto-queuing
+                    return ChatResponse(reply=t('db_empty_offer_external', locale), session_id=req.session_id)
+            # If preview call failed, keep previous heuristic reply
     return ChatResponse(reply=reply, session_id=req.session_id)
