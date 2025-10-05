@@ -3,6 +3,11 @@
 module Api
   module V1
     class ChatSessionsController < Api::BaseController
+      def index
+        sessions = current_account.chat_sessions.order(created_at: :desc)
+        render json: { chat_sessions: sessions.map { |s| { id: s.id, status: s.status } } }
+      end
+
       def create
         session = current_account.chat_sessions.create!(user: current_user, status: 'active')
         render json: { chat_session: { id: session.id, status: session.status } }, status: :created
@@ -14,6 +19,24 @@ module Api
         render json: { chat_session: { id: session.id, status: session.status, messages: } }
       end
 
+      def pause
+        session = current_account.chat_sessions.find(params[:id])
+        session.update!(status: 'paused')
+        render json: { chat_session: { id: session.id, status: session.status } }
+      end
+
+      def resume
+        session = current_account.chat_sessions.find(params[:id])
+        session.update!(status: 'active')
+        render json: { chat_session: { id: session.id, status: session.status } }
+      end
+
+      def complete
+        session = current_account.chat_sessions.find(params[:id])
+        session.update!(status: 'completed')
+        render json: { chat_session: { id: session.id, status: session.status } }
+      end
+
       private
 
       def serialize_message(m)
@@ -22,4 +45,3 @@ module Api
     end
   end
 end
-

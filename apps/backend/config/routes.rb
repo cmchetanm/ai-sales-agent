@@ -62,8 +62,15 @@ Rails.application.routes.draw do
           end
         end
         resources :users, only: [:index]
-        resources :chat_sessions, only: %i[create show] do
+        resources :chat_sessions, only: %i[index create show] do
           resources :messages, only: %i[index create], controller: 'chat_messages'
+        end
+        resources :chat_sessions, only: [] do
+          member do
+            post :pause
+            post :resume
+            post :complete
+          end
         end
 
         namespace :integrations do
@@ -72,11 +79,14 @@ Rails.application.routes.draw do
         end
         post 'integrations/apollo', to: 'integrations/apollo#create'
         post 'integrations/discover', to: 'integrations/discover#create'
-        namespace :internal do
-          post 'profile_update', to: 'tools#profile_update'
-          post 'apollo_fetch', to: 'tools#apollo_fetch'
-          post 'email_event', to: 'tools#email_event'
-        end
+      namespace :internal do
+        post 'ping', to: 'tools#ping'
+        post 'profile_update', to: 'tools#profile_update'
+        post 'apollo_fetch', to: 'tools#apollo_fetch'
+        post 'db_preview_leads', to: 'tools#db_preview_leads'
+        post 'close_chat', to: 'tools#close_chat'
+        post 'email_event', to: 'tools#email_event'
+      end
         resource :account, only: %i[show update]
 
         namespace :auth do
@@ -129,8 +139,15 @@ Rails.application.routes.draw do
         end
       end
       resources :users, only: [:index]
-      resources :chat_sessions, only: %i[create show] do
+      resources :chat_sessions, only: %i[index create show] do
         resources :messages, only: %i[index create], controller: 'chat_messages'
+      end
+      resources :chat_sessions, only: [] do
+        member do
+          post :pause
+          post :resume
+          post :complete
+        end
       end
       namespace :integrations do
         resource :apollo, only: :create
@@ -139,9 +156,12 @@ Rails.application.routes.draw do
       post 'integrations/apollo', to: 'integrations/apollo#create'
       post 'integrations/discover', to: 'integrations/discover#create'
       namespace :internal do
+        post 'ping', to: 'tools#ping'
         post 'profile_update', to: 'tools#profile_update'
         post 'apollo_fetch', to: 'tools#apollo_fetch'
         post 'discover_leads', to: 'tools#discover_leads'
+        post 'db_preview_leads', to: 'tools#db_preview_leads'
+        post 'close_chat', to: 'tools#close_chat'
         post 'email_event', to: 'tools#email_event'
       end
       resource :account, only: %i[show update]

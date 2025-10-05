@@ -4,6 +4,9 @@ module Api
   module V1
     module Internal
       class ToolsController < BaseController
+        def ping
+          head :ok
+        end
         def profile_update
           account = Account.find(params.require(:account_id))
           account.create_profile unless account.profile
@@ -24,6 +27,23 @@ module Api
         filters = params.require(:filters).permit(:keywords, :role, :location).to_h.symbolize_keys
         LeadDiscoveryJob.perform_later(account_id: account.id, filters:)
         render json: { status: 'queued' }, status: :accepted
+      end
+
+      # Synchronous DB preview search (no external vendors)
+      def db_preview_leads
+        account = Account.find(params.require(:account_id))
+        filters = params.require(:filters).permit(:keywords, :role, :location).to_h.symbolize_keys
+        limit = params[:limit].presence&.to_i || 5
+        rows, total = db_search(account, filters, limit)
+        render json: { status: 'ok', total:, results: rows }
+      end
+
+      # Mark a chat session as completed
+      def close_chat
+        account = Account.find(params.require(:account_id))
+        session = account.chat_sessions.find(params.require(:chat_session_id))
+        session.update!(status: 'completed')
+        render json: { status: 'ok' }
       end
 
       # POST /api/v1/internal/email_event
@@ -74,6 +94,34 @@ module Api
           v[status] = v.fetch(status, 0) + 1
         end
         campaign.update_column(:metrics, metrics)
+      end
+
+      def db_search(account, filters, limit)
+        q = filters[:keywords].to_s.downcase
+        role = filters[:role].to_s.downcase
+        location = filters[:location].to_s.downcase
+        scope = account.leads
+        conditions = []
+        params = {}
+        unless q.blank?
+          conditions << '(LOWER(email) LIKE :q OR LOWER(company) LIKE :q OR LOWER(first_name) LIKE :q OR LOWER(last_name) LIKE :q)'
+          params[:q] = "%#{q}%"
+        end
+        unless role.blank?
+          conditions << 'LOWER(job_title) LIKE :role'
+          params[:role] = "%#{role}%"
+        end
+        unless location.blank?
+          conditions << 'LOWER(location) LIKE :loc'
+          params[:loc] = "%#{location}%"
+        end
+        return [[], 0] if conditions.empty?
+        rel = scope.where(conditions.join(' AND '), params)
+        total = rel.count
+        rows = rel.limit(limit).map do |l|
+          { first_name: l.first_name, last_name: l.last_name, email: l.email, company: l.company }
+        end
+        [rows, total]
       end
       end
     end

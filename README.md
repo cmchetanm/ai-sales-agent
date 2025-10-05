@@ -68,3 +68,5 @@ Detailed setup instructions will be added as the individual services are impleme
 - Set `INTERNAL_API_TOKEN` in `ops/env/.env.development` (a non-empty value), and restart the stack (`make down ENV=development && make up ENV=development`).
 - The LLM service posts to the backend's internal tools endpoints using this token. Without it, discovery jobs are not queued.
 - Optionally verify by hitting `POST /api/v1/internal/discover_leads` with header `X-Internal-Token: <your token>`.
+- Quick health check: `POST /api/v1/internal/ping` with the same header should return `200 OK` when the token is correct.
+- Dev defaults: In non‑production, the backend accepts the default token `dev-internal-token` if `INTERNAL_API_TOKEN` is unset. The LLM also falls back to this value when `PYTHON_ENV`/`APP_ENV` is not `production`.

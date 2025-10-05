@@ -62,4 +62,8 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions
   config.action_controller.raise_on_missing_callback_actions = true
+
+  # Allow internal container-to-container calls using service hostnames
+  # e.g., LLM service posting to http://backend:3000
+  config.hosts << /\Abackend(:\d+)?\z/
 end

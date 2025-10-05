@@ -16,6 +16,13 @@ RESOURCES: Dict[str, Dict[str, str]] = {
             'Thanks — I saved your preferences and started fetching leads. '
             'You can refine industry, roles, or geography to improve results.'
         ),
+        'ask_industry': 'Which industries should I target (e.g., IT, healthcare, finance)?',
+        'ask_role': 'Which roles should I target (e.g., CTO, VP Engineering)?',
+        'ask_location': 'Any preferred locations or countries (e.g., US)?',
+        'db_preview_intro': 'Here are some leads from your database:',
+        'db_satisfied': 'Are you satisfied with these results? Reply yes to close, or no to fetch more from external sources.',
+        'closing': 'Great — closing this chat. You can start a new session anytime.',
+        'fetching_more': 'Understood — fetching more via external sources now.',
     },
     'es': {
         'system_prompt': (
@@ -31,6 +38,13 @@ RESOURCES: Dict[str, Dict[str, str]] = {
             'Gracias — Guardé tus preferencias y comencé a traer leads. '
             'Puedes afinar industria, roles o geografía para mejorar resultados.'
         ),
+        'ask_industry': '¿Qué industrias debo buscar (p. ej., TI, salud, finanzas)?',
+        'ask_role': '¿Qué roles debo buscar (p. ej., CTO, VP de Ingeniería)?',
+        'ask_location': '¿Alguna ubicación o país preferido (p. ej., EE. UU.)?',
+        'db_preview_intro': 'Aquí hay algunos leads de tu base de datos:',
+        'db_satisfied': '¿Te satisfacen estos resultados? Responde sí para cerrar, o no para buscar más fuentes externas.',
+        'closing': 'Perfecto — cierro este chat. Puedes iniciar otro cuando quieras.',
+        'fetching_more': 'Entendido — buscando más con fuentes externas ahora.',
     },
     'fr': {
         'system_prompt': (
@@ -46,6 +60,13 @@ RESOURCES: Dict[str, Dict[str, str]] = {
             'Merci — J’ai enregistré vos préférences et commencé à récupérer des leads. '
             'Vous pouvez affiner industrie, rôles ou géographie pour améliorer les résultats.'
         ),
+        'ask_industry': 'Quelles industries dois-je cibler (ex. IT, santé, finance) ?',
+        'ask_role': 'Quels rôles dois-je cibler (ex. CTO, VP Engineering) ?',
+        'ask_location': 'Des lieux ou pays préférés (ex. US) ?',
+        'db_preview_intro': 'Voici quelques leads de votre base de données :',
+        'db_satisfied': 'Êtes-vous satisfait ? Répondez oui pour clôturer, ou non pour chercher davantage via des sources externes.',
+        'closing': 'Parfait — je clôture cette discussion. Vous pouvez en démarrer une nouvelle à tout moment.',
+        'fetching_more': 'Compris — je récupère davantage via des sources externes.',
     },
 }
 

@@ -19,6 +19,12 @@ module Integrations
     end
 
     def search_people(filters = {})
+      # Never hit external API during tests unless explicitly allowed
+      if defined?(Rails) && Rails.env.test?
+        # In test, only allow HTTP when the client is enabled and has an API key
+        # (e.g., explicit `enabled: true` in unit tests with WebMock stubs).
+        return sample_results(filters) unless (@enabled && @api_key.present? && @conn)
+      end
       return sample_results(filters) unless @enabled && @api_key.present? && @conn
 
       payload = payload_for(filters)
@@ -35,6 +41,10 @@ module Integrations
     private
 
     def apollo_enabled?
+      # In test, default-off unless explicitly enabled via APOLLO_ENABLED_TEST
+      if defined?(Rails) && Rails.env.test?
+        return ENV.fetch('APOLLO_ENABLED_TEST', 'false').to_s.casecmp('true').zero?
+      end
       # Default-off in non-production to avoid accidental external calls.
       ENV.fetch('APOLLO_ENABLED', Rails.env.production? ? 'true' : 'false').to_s.casecmp('true').zero?
     end

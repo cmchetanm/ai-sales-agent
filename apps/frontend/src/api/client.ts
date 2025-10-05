@@ -178,9 +178,29 @@ export const api = {
     { method: 'POST' },
     token
   ),
+  chatSessionsIndex: (token: string) => request<{ chat_sessions: { id: number; status: string }[] }>(
+    '/api/v1/chat_sessions',
+    {},
+    token
+  ),
   chatSessionShow: (token: string, id: number) => request<{ chat_session: { id: number; messages: any[] } }>(
     `/api/v1/chat_sessions/${id}`,
     {},
+    token
+  ),
+  chatSessionPause: (token: string, id: number) => request<{ chat_session: { id: number; status: string } }>(
+    `/api/v1/chat_sessions/${id}/pause`,
+    { method: 'POST' },
+    token
+  ),
+  chatSessionResume: (token: string, id: number) => request<{ chat_session: { id: number; status: string } }>(
+    `/api/v1/chat_sessions/${id}/resume`,
+    { method: 'POST' },
+    token
+  ),
+  chatSessionComplete: (token: string, id: number) => request<{ chat_session: { id: number; status: string } }>(
+    `/api/v1/chat_sessions/${id}/complete`,
+    { method: 'POST' },
     token
   ),
   chatMessagesIndex: (token: string, chatSessionId: number) => request<{ messages: any[] }>(

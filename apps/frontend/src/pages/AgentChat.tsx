@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Card, CardContent, IconButton, Stack, TextField, Typography, LinearProgress, Chip, Box } from '@mui/material';
+import { Card, CardContent, IconButton, Stack, TextField, Typography, LinearProgress, Chip, Box, MenuItem, Select, FormControl, InputLabel, Tooltip } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
@@ -13,6 +13,7 @@ export const AgentChat = () => {
   const { token } = useAuth();
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [sessions, setSessions] = useState<{id:number; status:string}[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -37,6 +38,8 @@ export const AgentChat = () => {
   useEffect(() => {
     const init = async () => {
       if (!token) return;
+      const list = await api.chatSessionsIndex(token);
+      if (list.ok && list.data) setSessions(list.data.chat_sessions || []);
       const stored = Number(localStorage.getItem('last_chat_session_id') || '');
       if (stored && !Number.isNaN(stored)) {
         const show = await api.chatSessionShow(token, stored);
@@ -73,9 +76,49 @@ export const AgentChat = () => {
     }
   };
 
+  const createSession = async () => {
+    if (!token) return;
+    const res = await api.chatSessionCreate(token);
+    if (res.ok && res.data) {
+      setSessionId(res.data.chat_session.id);
+      setMessages([]);
+      const list = await api.chatSessionsIndex(token); if (list.ok && list.data) setSessions(list.data.chat_sessions || []);
+    }
+  };
+
+  const loadSession = async (id: number) => {
+    if (!token) return;
+    const show = await api.chatSessionShow(token, id);
+    if (show.ok && show.data) {
+      setSessionId(show.data.chat_session.id);
+      setMessages((show.data.chat_session.messages || []) as ChatMsg[]);
+      localStorage.setItem('last_chat_session_id', String(id));
+    }
+  };
+
+  const assistantText = (messages[messages.length-1]?.role === 'assistant') ? messages[messages.length-1]?.content || '' : '';
+  const showYN = /satisfied/i.test(assistantText);
+  const showIndustryHints = /Which industries/i.test(assistantText);
+  const showRoleHints = /Which roles/i.test(assistantText);
+  const showLocationHints = /locations|countries/i.test(assistantText);
+
   return (
     <Stack spacing={2}>
-      <Typography variant="h5" fontWeight={800}>{t('chat.title')}</Typography>
+      <Stack direction="row" spacing={2} alignItems="center">
+        <Typography variant="h5" fontWeight={800}>{t('chat.title')}</Typography>
+        <FormControl size="small" sx={{ minWidth: 160 }}>
+          <InputLabel id="session-select">Session</InputLabel>
+          <Select labelId="session-select" label="Session" value={sessionId || ''}
+            onChange={(e) => { const id = Number(e.target.value); if (!Number.isNaN(id)) loadSession(id); }}>
+            {sessions.map((s) => (
+              <MenuItem key={s.id} value={s.id}>#{s.id} — {s.status}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <Tooltip title="Start a new chat session">
+          <Chip label="New Session" color="primary" onClick={createSession} />
+        </Tooltip>
+      </Stack>
       <Card className="glass" sx={{ position: 'relative' }}>
         {sending && <LinearProgress color="secondary" />}
         <CardContent>
@@ -98,7 +141,22 @@ export const AgentChat = () => {
         <ScrollToBottom visible={showScroll} onClick={() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' })} />
       </Card>
       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-        {['Target CTOs in US','Add AI keywords','Location: EU','Role: Marketing'].map((hint) => (
+        {showYN && (
+          <>
+            <Chip color="success" label="Yes" size="small" onClick={() => setInput((prev) => prev || 'yes')} />
+            <Chip color="warning" label="No, fetch more" size="small" onClick={() => setInput((prev) => prev || 'no, fetch more')} />
+          </>
+        )}
+        {showIndustryHints && ['IT','Healthcare','Finance','SaaS'].map((hint) => (
+          <Chip key={hint} label={hint} size="small" onClick={() => setInput((prev) => prev || hint)} />
+        ))}
+        {showRoleHints && ['CTO','VP Engineering','Head of Engineering'].map((hint) => (
+          <Chip key={hint} label={hint} size="small" onClick={() => setInput((prev) => prev || `Role: ${hint}`)} />
+        ))}
+        {showLocationHints && ['US','EU','India'].map((hint) => (
+          <Chip key={hint} label={hint} size="small" onClick={() => setInput((prev) => prev || hint)} />
+        ))}
+        {!showYN && !showIndustryHints && !showRoleHints && !showLocationHints && ['Target CTOs in US','Add AI keywords','Location: EU','Role: Marketing'].map((hint) => (
           <Chip key={hint} label={hint} size="small" onClick={() => setInput((prev) => prev || hint)} />
         ))}
       </Box>
