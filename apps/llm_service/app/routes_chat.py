@@ -96,7 +96,7 @@ _SESSION_STATE: dict[str, dict] = {}
 def _get_state(session_id: str) -> dict:
     st = _SESSION_STATE.get(session_id)
     if not st:
-        st = {"step": "collecting", "discover_ts": 0.0, "last_filters": {}}
+        st = {"step": "collecting", "discover_ts": 0.0, "last_filters": {}, "await_kind": None}
         _SESSION_STATE[session_id] = st
     return st
 
@@ -243,19 +243,38 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
     last_user = next((m.content for m in req.messages[::-1] if m.role == 'user'), "")
     if last_user and st.get("step") == "await_confirmation":
         lower = last_user.lower()
-        if any(w in lower for w in ["yes", "looks good", "good", "great", "satisfied", "close", "done"]):
-            _post_internal("/api/v1/internal/close_chat", {"account_id": req.account_id, "chat_session_id": req.session_id})
-            return ChatResponse(reply=t('closing', locale), session_id=req.session_id)
-        if any(w in lower for w in ["no", "more", "not enough", "find more", "keep searching", "external", "fetch more"]):
-            # Queue external sources now, but suppress repeats for a short window
-            history_filters = st.get("last_filters") or _extract_filters_from_messages([m.model_dump() for m in req.messages])
-            queued, duplicate, queued_status = _queue_discovery_once(req.account_id, req.session_id, history_filters)
-            if queued and not duplicate:
-                st["discover_ts"] = time.time()
-                return ChatResponse(reply=t('fetching_more', locale), session_id=req.session_id)
-            if duplicate or (time.time() - st.get("discover_ts", 0)) < _DISCOVERY_TTL_SECONDS:
-                return ChatResponse(reply="On it — already fetching from external sources.", session_id=req.session_id)
-            # fall through to regular handling if not queued
+        kind = st.get("await_kind")
+        yes_words = ["yes", "y", "yeah", "yep", "sure", "ok", "okay", "please do"]
+        more_words = ["no", "more", "not enough", "find more", "keep searching", "external", "fetch more", "apollo", "apollo.io"]
+        if kind == "satisfied":
+            if any(w in lower for w in yes_words + ["looks good", "good", "great", "satisfied", "close", "done"]):
+                _post_internal("/api/v1/internal/close_chat", {"account_id": req.account_id, "chat_session_id": req.session_id})
+                st["step"] = "completed"
+                return ChatResponse(reply=t('closing', locale), session_id=req.session_id)
+            if any(w in lower for w in more_words):
+                # Queue external sources now, but suppress repeats for a short window
+                history_filters = st.get("last_filters") or _extract_filters_from_messages([m.model_dump() for m in req.messages])
+                queued, duplicate, queued_status = _queue_discovery_once(req.account_id, req.session_id, history_filters)
+                if queued and not duplicate:
+                    st["discover_ts"] = time.time()
+                    st["step"] = "collecting"
+                    return ChatResponse(reply=t('fetching_more', locale), session_id=req.session_id)
+                if duplicate or (time.time() - st.get("discover_ts", 0)) < _DISCOVERY_TTL_SECONDS:
+                    return ChatResponse(reply="On it — already fetching from external sources.", session_id=req.session_id)
+        elif kind == "external_offer":
+            if any(w in lower for w in yes_words + ["search", "go ahead", "do it", "fetch", "apollo", "apollo.io"]):
+                filters = st.get("last_filters") or _extract_filters_from_messages([m.model_dump() for m in req.messages])
+                queued, duplicate, queued_status = _queue_discovery_once(req.account_id, req.session_id, filters)
+                if queued and not duplicate:
+                    st["discover_ts"] = time.time()
+                    st["step"] = "collecting"
+                    return ChatResponse(reply=t('fetching_more', locale), session_id=req.session_id)
+                if duplicate or (time.time() - st.get("discover_ts", 0)) < _DISCOVERY_TTL_SECONDS:
+                    return ChatResponse(reply="On it — already fetching from external sources.", session_id=req.session_id)
+            if any(w in lower for w in ["no", "adjust", "change", "refine", "different", "another"]):
+                st["step"] = "collecting"
+                return ChatResponse(reply=t('ask_industry', locale), session_id=req.session_id)
+        # If none matched, fall through to normal handling
     if last_user:
         filters = _extract_filters(last_user)
         if not any(filters.values()):
@@ -286,9 +305,11 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
                         line = f"- {name or '(No name)'} — {r.get('company') or ''} — {r.get('email') or ''}"
                         bullets.append(line)
                     reply = t('db_preview_intro', locale) + "\n" + "\n".join(bullets) + "\n" + t('db_satisfied', locale)
+                    st["await_kind"] = "satisfied"
                     return ChatResponse(reply=reply, session_id=req.session_id)
                 else:
                     # No DB results; ask whether to search external instead of auto-queuing
+                    st["await_kind"] = "external_offer"
                     return ChatResponse(reply=t('db_empty_offer_external', locale), session_id=req.session_id)
             # If preview call failed, keep previous heuristic reply
     return ChatResponse(reply=reply, session_id=req.session_id)
