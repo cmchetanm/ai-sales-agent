@@ -108,7 +108,7 @@ def _discovery_key(account_id: int, session_id: str, filters: Dict[str, str]) ->
     return f"{account_id}:{session_id}:{role}:{loc}:{kw}"
 
 
-def _queue_discovery_once(account_id: int, session_id: str, filters: Dict[str, str]) -> tuple[bool, bool, int]:
+def _queue_discovery_once(account_id: int, session_id: str, filters: Dict[str, str]) -> tuple[bool, bool, int, Dict]:
     """Queue discover_leads, with a short TTL to prevent loops.
 
     Returns (queued, duplicate, status_code).
@@ -118,14 +118,16 @@ def _queue_discovery_once(account_id: int, session_id: str, filters: Dict[str, s
     key = _discovery_key(account_id, session_id, filters)
     ts = _RECENT_DISCOVERY.get(key)
     if ts and (now - ts) < _DISCOVERY_TTL_SECONDS:
-        return (False, True, 200)
-    ok, status = _post_internal(
+        return (False, True, 200, {})
+    # In non-production, optionally run discovery synchronously to make UX snappier
+    sync = (os.getenv("PYTHON_ENV") or os.getenv("APP_ENV") or os.getenv("RAILS_ENV") or "").lower() != "production"
+    ok, status, body = _post_internal_json(
         "/api/v1/internal/discover_leads",
-        {"account_id": account_id, "filters": filters},
+        {"account_id": account_id, "filters": filters, "sync": sync},
     )
     if ok:
         _RECENT_DISCOVERY[key] = now
-    return (ok, False, status)
+    return (ok, False, status, body or {})
 
 
 def _candidate_tokens() -> List[str]:
@@ -254,21 +256,25 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
             if any(w in lower for w in more_words):
                 # Queue external sources now, but suppress repeats for a short window
                 history_filters = st.get("last_filters") or _extract_filters_from_messages([m.model_dump() for m in req.messages])
-                queued, duplicate, queued_status = _queue_discovery_once(req.account_id, req.session_id, history_filters)
+                queued, duplicate, queued_status, body = _queue_discovery_once(req.account_id, req.session_id, history_filters)
                 if queued and not duplicate:
                     st["discover_ts"] = time.time()
                     st["step"] = "collecting"
-                    return ChatResponse(reply=t('fetching_more', locale), session_id=req.session_id)
+                    created = body.get("created") if isinstance(body, dict) else None
+                    extra = f" ({created} new leads)" if isinstance(created, int) else ""
+                    return ChatResponse(reply=t('fetching_more', locale) + extra, session_id=req.session_id)
                 if duplicate or (time.time() - st.get("discover_ts", 0)) < _DISCOVERY_TTL_SECONDS:
                     return ChatResponse(reply="On it — already fetching from external sources.", session_id=req.session_id)
         elif kind == "external_offer":
             if any(w in lower for w in yes_words + ["search", "go ahead", "do it", "fetch", "apollo", "apollo.io"]):
                 filters = st.get("last_filters") or _extract_filters_from_messages([m.model_dump() for m in req.messages])
-                queued, duplicate, queued_status = _queue_discovery_once(req.account_id, req.session_id, filters)
+                queued, duplicate, queued_status, body = _queue_discovery_once(req.account_id, req.session_id, filters)
                 if queued and not duplicate:
                     st["discover_ts"] = time.time()
                     st["step"] = "collecting"
-                    return ChatResponse(reply=t('fetching_more', locale), session_id=req.session_id)
+                    created = body.get("created") if isinstance(body, dict) else None
+                    extra = f" ({created} new leads)" if isinstance(created, int) else ""
+                    return ChatResponse(reply=t('fetching_more', locale) + extra, session_id=req.session_id)
                 if duplicate or (time.time() - st.get("discover_ts", 0)) < _DISCOVERY_TTL_SECONDS:
                     return ChatResponse(reply="On it — already fetching from external sources.", session_id=req.session_id)
             if any(w in lower for w in ["no", "adjust", "change", "refine", "different", "another"]):

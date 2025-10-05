@@ -25,8 +25,17 @@ module Api
       def discover_leads
         account = Account.find(params.require(:account_id))
         filters = params.require(:filters).permit(:keywords, :role, :location).to_h.symbolize_keys
-        LeadDiscoveryJob.perform_later(account_id: account.id, filters:)
-        render json: { status: 'queued' }, status: :accepted
+        sync = ActiveModel::Type::Boolean.new.cast(params[:sync]) ||
+               (Rails.env.development? && ActiveModel::Type::Boolean.new.cast(ENV.fetch('INTERNAL_SYNC_JOBS', 'false')))
+        if sync
+          before = account.leads.count
+          LeadDiscoveryJob.perform_now(account_id: account.id, filters:)
+          after = account.leads.count
+          render json: { status: 'ok', mode: 'sync', created: [after - before, 0].max }, status: :ok
+        else
+          LeadDiscoveryJob.perform_later(account_id: account.id, filters:)
+          render json: { status: 'queued' }, status: :accepted
+        end
       end
 
       # Synchronous DB preview search (no external vendors)
