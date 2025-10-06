@@ -70,3 +70,9 @@ Detailed setup instructions will be added as the individual services are impleme
 - Optionally verify by hitting `POST /api/v1/internal/discover_leads` with header `X-Internal-Token: <your token>`.
 - Quick health check: `POST /api/v1/internal/ping` with the same header should return `200 OK` when the token is correct.
 - Dev defaults: In non‑production, the backend accepts the default token `dev-internal-token` if `INTERNAL_API_TOKEN` is unset. The LLM also falls back to this value when `PYTHON_ENV`/`APP_ENV` is not `production`.
+
+### Live chat updates
+
+- The frontend subscribes to Action Cable (`/cable`) and receives new messages in real time.
+- If you run the frontend on a different port (e.g., Vite on 5173), development allows cross‑origin WebSocket connections.
+- Configure cable URL via `VITE_CABLE_URL` if needed; otherwise it derives from `VITE_BACKEND_URL`.

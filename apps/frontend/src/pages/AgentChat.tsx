@@ -6,6 +6,7 @@ import { api } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import { ChatBubble } from '../components/ChatBubble';
 import { ScrollToBottom } from '../components/ScrollToBottom';
+import { createCable } from '../lib/cable';
 
 type ChatMsg = { id?: number; role: 'user' | 'assistant'; content: string; sent_at?: string };
 
@@ -20,7 +21,9 @@ export const AgentChat = () => {
   const listRef = useRef<HTMLDivElement>(null);
   const [showScroll, setShowScroll] = useState(false);
   const { t } = useTranslation();
-  const POLL_MS = Number(((import.meta as any).env?.VITE_CHAT_POLL_MS as string) || 3000);
+  // ActionCable consumer
+  const cableRef = useRef<ReturnType<typeof createCable> | null>(null);
+  const subRef = useRef<any>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -57,26 +60,29 @@ export const AgentChat = () => {
     init();
   }, [token]);
 
-  // Poll for new messages so chat updates in real time when the agent
-  // posts follow-ups (e.g., after background discovery finishes).
+  // Subscribe to ActionCable updates for this chat session
   useEffect(() => {
-    let timer: number | undefined;
-    if (token && sessionId) {
-      const tick = async () => {
-        const resp = await api.chatMessagesIndex(token, sessionId);
-        if (resp.ok && resp.data) {
-          const serverMsgs = (resp.data.messages || []) as ChatMsg[];
-          // Only update if changed in length or content to avoid extra renders
-          const changed = serverMsgs.length !== messages.length || serverMsgs[serverMsgs.length - 1]?.content !== messages[messages.length - 1]?.content;
-          if (changed) setMessages(serverMsgs);
+    if (!token || !sessionId) return;
+    // Ensure connection
+    if (!cableRef.current) cableRef.current = createCable();
+    // Subscribe
+    subRef.current = cableRef.current.subscriptions.create(
+      { channel: 'ChatSessionChannel', id: sessionId },
+      {
+        received: (data: any) => {
+          if (data?.event === 'message.created' && data.message) {
+            setMessages((prev) => {
+              const exists = prev.some((m) => m.id === data.message.id);
+              return exists ? prev : [...prev, data.message as ChatMsg];
+            });
+          }
         }
-      };
-      // Initial refresh then start interval
-      tick();
-      // @ts-ignore
-      timer = window.setInterval(tick, POLL_MS);
-    }
-    return () => { if (timer) window.clearInterval(timer); };
+      }
+    );
+    return () => {
+      try { if (subRef.current) subRef.current.unsubscribe(); } catch {}
+      subRef.current = null;
+    };
   }, [token, sessionId]);
 
   // Persist last session id locally to allow resuming chats

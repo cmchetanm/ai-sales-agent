@@ -188,6 +188,8 @@ Rails.application.routes.draw do
   end
 
   mount Sidekiq::Web => '/sidekiq'
+  # Action Cable (WebSocket)
+  mount ActionCable.server => '/cable'
 
   root to: 'api/v1/health#show'
 
