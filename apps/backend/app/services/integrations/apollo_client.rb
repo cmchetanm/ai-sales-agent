@@ -27,11 +27,25 @@ module Integrations
       end
       return sample_results(filters) unless @enabled && @api_key.present? && @conn
 
-      payload = payload_for(filters)
-      resp = @conn.post('mixed_people/search', payload)
-      return map_results(resp.body) if resp.success?
+      desired = (filters[:limit] || ENV.fetch('APOLLO_RESULT_LIMIT', 25)).to_i
+      per_page = [[(ENV.fetch('APOLLO_PER_PAGE', 25)).to_i, desired].min, 100].min
+      page = 1
+      out = []
 
-      Rails.logger.warn("Apollo search non-200: status=#{resp.status}")
+      loop do
+        payload = payload_for(filters, page: page, per_page: per_page)
+        resp = safe_post('mixed_people/search', payload)
+        break unless resp && resp[:ok]
+        out.concat(map_results(resp[:body]))
+        break if out.size >= desired
+
+        # Attempt to continue while results present
+        page += 1
+        # Stop after 10 pages to be safe
+        break if page > 10
+      end
+
+      return out.first(desired) if out.any?
       sample_results(filters)
     rescue Faraday::Error => e
       Rails.logger.warn("Apollo search error: #{e.message}")
@@ -49,15 +63,47 @@ module Integrations
       ENV.fetch('APOLLO_ENABLED', Rails.env.production? ? 'true' : 'false').to_s.casecmp('true').zero?
     end
 
-    def payload_for(filters)
-      {
+    def payload_for(filters, page: 1, per_page: 5)
+      payload = {
         api_key: @api_key,
         q_keywords: filters[:keywords].presence,
-        person_titles: filters[:role].present? ? [filters[:role]] : nil,
-        person_locations: filters[:location].present? ? [filters[:location]] : nil,
-        page: 1,
-        per_page: 5
+        person_titles: filters[:role].present? ? Array(filters[:role]) : nil,
+        person_locations: filters[:location].present? ? Array(filters[:location]) : nil,
+        page: page,
+        per_page: per_page
       }.compact
+
+      # Optional industry/company size hints (best effort; silently ignored by API if not supported)
+      if filters[:industry].present?
+        payload[:organization_industry_tags] = Array(filters[:industry])
+      end
+      if filters[:company_size].present?
+        payload[:organization_num_employees_ranges] = Array(filters[:company_size])
+      end
+      payload
+    end
+
+    # Post with basic retry on 429/5xx
+    def safe_post(path, payload)
+      attempts = 0
+      while attempts < 3
+        attempts += 1
+        begin
+          resp = @conn.post(path, payload)
+          return { ok: true, body: resp.body } if resp.success?
+          if resp.status == 429
+            sleep(0.25 * attempts)
+            next
+          end
+          Rails.logger.warn("Apollo non-success status=#{resp.status} body=#{resp.body.inspect}")
+          return nil
+        rescue Faraday::Error => e
+          Rails.logger.warn("Apollo error: #{e.class}: #{e.message}")
+          sleep(0.25 * attempts)
+          next
+        end
+      end
+      nil
     end
 
     def map_results(body)
@@ -93,6 +139,16 @@ module Integrations
         { first_name: 'Ben', last_name: 'Kim',  email: "ben.#{seed}@example.com", company: 'Sample LLC' },
         { first_name: 'Cara', last_name: 'Diaz', email: "cara.#{seed}@example.com", company: 'Acme Inc' }
       ]
+    end
+
+    public
+
+    def enabled?
+      !!@enabled
+    end
+
+    def ready?
+      enabled? && @api_key.present? && !@conn.nil?
     end
   end
 end

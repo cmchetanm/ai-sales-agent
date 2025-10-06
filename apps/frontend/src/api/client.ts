@@ -218,6 +218,11 @@ export const api = {
     { method: 'POST', body: JSON.stringify({ filters }) },
     token
   ),
+  apolloStatus: (token: string) => request<{ apollo: { enabled: boolean; ready: boolean; has_key: boolean; mode: 'live'|'sample' } }>(
+    '/api/v1/integrations/status',
+    {},
+    token
+  ),
   discoverLeads: (token: string, filters: Record<string, any>) => request<{ status: string }>(
     '/api/v1/integrations/discover',
     { method: 'POST', body: JSON.stringify({ filters }) },

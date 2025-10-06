@@ -74,8 +74,9 @@ Rails.application.routes.draw do
         end
 
         namespace :integrations do
-          resource :apollo, only: :create
+          resource :apollo, only: %i[create show]
           resource :discover, only: :create
+          resource :status, only: :show
         end
         post 'integrations/apollo', to: 'integrations/apollo#create'
         post 'integrations/discover', to: 'integrations/discover#create'
@@ -151,9 +152,11 @@ Rails.application.routes.draw do
         end
       end
       namespace :integrations do
-        resource :apollo, only: :create
+        resource :apollo, only: %i[create show]
         resource :discover, only: :create
+        resource :status, only: :show
       end
+      get  'integrations/apollo', to: 'integrations/apollo#show'
       post 'integrations/apollo', to: 'integrations/apollo#create'
       post 'integrations/discover', to: 'integrations/discover#create'
       namespace :internal do
@@ -194,6 +197,9 @@ Rails.application.routes.draw do
   root to: 'api/v1/health#show'
 
   # Explicit route for test environment safety
+  get  '/api/v1/integrations/apollo', to: 'api/v1/integrations/apollo#show'
+  get  '/api/v1/integrations/status', to: 'api/v1/integrations/status#show'
+  get  '/api/v1/integrations/health', to: 'api/v1/integrations/status#show'
   post '/api/v1/integrations/apollo', to: 'api/v1/integrations/apollo#create'
   post '/api/v1/integrations/discover', to: 'api/v1/integrations/discover#create'
 end

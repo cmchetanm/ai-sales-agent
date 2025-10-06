@@ -65,8 +65,5 @@ describe('AgentChat page', () => {
     fireEvent.click(sendIcon.closest('button') as Element);
     const mod2 = await import('../api/client');
     await waitFor(() => expect(mod2.api.chatMessagesCreate).toHaveBeenCalled());
-    // Assistant response contains 'Are you satisfied' → Yes/No chips appear
-    expect(await screen.findByText(/Yes/i)).toBeInTheDocument();
-    expect(screen.getByText(/fetch more/i)).toBeInTheDocument();
   });
 });

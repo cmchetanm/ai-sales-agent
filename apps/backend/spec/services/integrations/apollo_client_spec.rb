@@ -26,7 +26,7 @@ RSpec.describe Integrations::ApolloClient do
         )
 
       client = described_class.new(api_key: 'test-key', enabled: true)
-      results = client.search_people(keywords: 'saas')
+      results = client.search_people(keywords: 'saas', limit: 1)
 
       expect(results.size).to eq(1)
       expect(results.first).to include(first_name: 'Jane', last_name: 'Doe', email: 'jane@example.com', company: 'Acme Inc')

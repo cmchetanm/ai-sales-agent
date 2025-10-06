@@ -15,6 +15,7 @@ export const AgentChat = () => {
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [sessions, setSessions] = useState<{id:number; status:string}[]>([]);
+  const [apolloMode, setApolloMode] = useState<'live'|'sample'|'unknown'>('unknown');
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -42,6 +43,11 @@ export const AgentChat = () => {
   useEffect(() => {
     const init = async () => {
       if (!token) return;
+      try {
+        const st = await api.apolloStatus(token);
+        if (st.ok && st.data) setApolloMode(st.data.apollo.mode);
+        else setApolloMode('unknown');
+      } catch { setApolloMode('unknown'); }
       const list = await api.chatSessionsIndex(token);
       if (list.ok && list.data) setSessions(list.data.chat_sessions || []);
       const stored = Number(localStorage.getItem('last_chat_session_id') || '');
@@ -95,16 +101,15 @@ export const AgentChat = () => {
     const content = input.trim();
     setInput('');
     setSending(true);
-    // Let the server be source of truth; we optimistically push the user bubble
-    // and then the poll will replace the set with server messages shortly.
-    const stamp = new Date().toLocaleTimeString();
-    setMessages((prev) => [...prev, { role: 'user', content, sent_at: stamp }]);
     const res = await api.chatMessagesCreate(token, sessionId, content);
     setSending(false);
-    if (res.ok && res.data) {
-      const astamp = new Date().toLocaleTimeString();
-      setMessages((prev) => [...prev, { role: 'assistant', content: res.data.assistant.content, sent_at: astamp }]);
-    }
+    // Avoid local echo; let cable push messages. As a safety net fetch latest once.
+    try {
+      const refreshed = await api.chatMessagesIndex(token, sessionId);
+      if (refreshed.ok && refreshed.data) {
+        setMessages((refreshed.data.messages || []) as ChatMsg[]);
+      }
+    } catch {}
   };
 
   const createSession = async () => {
@@ -137,6 +142,7 @@ export const AgentChat = () => {
     <Stack spacing={2}>
       <Stack direction="row" spacing={2} alignItems="center">
         <Typography variant="h5" fontWeight={800}>{t('chat.title')}</Typography>
+        <Chip size="small" color={apolloMode === 'live' ? 'success' : (apolloMode === 'sample' ? 'default' : 'warning')} label={`Apollo: ${apolloMode === 'unknown' ? 'checking' : apolloMode}`} />
         <FormControl size="small" sx={{ minWidth: 160 }}>
           <InputLabel id="session-select">Session</InputLabel>
           <Select labelId="session-select" label="Session" value={sessionId || ''}
