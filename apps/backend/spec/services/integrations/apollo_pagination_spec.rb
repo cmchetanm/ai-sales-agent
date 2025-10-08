@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Integrations::ApolloClient do
   it 'paginates until desired limit is reached' do
-    stub_request(:post, 'https://api.apollo.io/v1/mixed_people/search')
+    stub_request(:post, 'https://api.apollo.io/api/v1/mixed_people/search')
       .with { |req| JSON.parse(req.body)['page'] == 1 }
       .to_return(status: 200, headers: { 'Content-Type' => 'application/json' }, body: {
         people: [
@@ -13,7 +13,7 @@ RSpec.describe Integrations::ApolloClient do
         ]
       }.to_json)
 
-    stub_request(:post, 'https://api.apollo.io/v1/mixed_people/search')
+    stub_request(:post, 'https://api.apollo.io/api/v1/mixed_people/search')
       .with { |req| JSON.parse(req.body)['page'] == 2 }
       .to_return(status: 200, headers: { 'Content-Type' => 'application/json' }, body: {
         people: [
@@ -29,20 +29,14 @@ RSpec.describe Integrations::ApolloClient do
 
   it 'retries on 429 responses' do
     # First call 429, second call 200
-    calls = 0
-    stub_request(:post, 'https://api.apollo.io/v1/mixed_people/search')
-      .to_return do
-        calls += 1
-        if calls == 1
-          { status: 429, body: { error: 'rate_limited' }.to_json, headers: { 'Content-Type' => 'application/json' } }
-        else
-          { status: 200, body: { people: [{ 'first_name' => 'X', 'last_name' => 'Y', 'email' => 'x@example.com', 'organization' => { 'name' => 'Z' } }] }.to_json, headers: { 'Content-Type' => 'application/json' } }
-        end
-      end
+    stub_request(:post, 'https://api.apollo.io/api/v1/mixed_people/search')
+      .to_return(
+        { status: 429, body: { error: 'rate_limited' }.to_json, headers: { 'Content-Type' => 'application/json' } },
+        { status: 200, body: { people: [{ 'first_name' => 'X', 'last_name' => 'Y', 'email' => 'x@example.com', 'organization' => { 'name' => 'Z' } }] }.to_json, headers: { 'Content-Type' => 'application/json' } }
+      )
 
     client = described_class.new(api_key: 'test-key', enabled: true)
     results = client.search_people(keywords: 'ai', limit: 1)
     expect(results.size).to eq(1)
   end
 end
-

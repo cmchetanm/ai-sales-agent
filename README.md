@@ -62,6 +62,16 @@ Detailed setup instructions will be added as the individual services are impleme
 
 - Rate limiting via Rack::Attack is enabled in production and can be toggled locally with `RACK_ATTACK_ENABLED=true` in `ops/env/.env.development`.
 
+### Secrets & push protection
+
+- Never commit real secrets. Use the tracked example `ops/env/.env.development.example` and keep your real `ops/env/.env.development` untracked (already ignored).
+- If a secret was committed and GitHub blocked your push:
+  1. Rotate the leaked key (e.g., OpenAI) in the provider console.
+  2. Purge from git history using the helper script (requires git-filter-repo):
+     - `bash scripts/secrets/purge_openai.sh`
+  3. Force-push after the rewrite: `git push --force-with-lease origin master`
+  4. Replace real values in local `.env.development` only and do not commit them.
+
 ### Troubleshooting: Chat agent not fetching leads
 
 - If the chat replies "saved your preferences and started fetching leads" but no leads appear, ensure internal auth is configured.

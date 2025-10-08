@@ -4,4 +4,66 @@ es:
     not_authorized: "No autorizado"
     not_found: "No encontrado"
     bad_request: "Solicitud incorrecta"
-
+  api:
+    status:
+      ok: "ok"
+      queued: "en cola"
+      created: "creado"
+      updated: "actualizado"
+      deleted: "eliminado"
+  datetime:
+    formats:
+      default: "%Y-%m-%d %H:%M:%S"
+      short: "%d %b %H:%M"
+      long: "%d de %B de %Y %H:%M"
+  date:
+    formats:
+      default: "%Y-%m-%d"
+      long: "%d de %B de %Y"
+      short: "%d %b"
+  time:
+    formats:
+      default: "%H:%M"
+  activerecord:
+    models:
+      account: "Cuenta"
+      user: "Usuario"
+      lead: "Lead"
+      pipeline: "Pipeline"
+      campaign: "Campaña"
+      email_template: "Plantilla de correo"
+      chat_message: "Mensaje de chat"
+      chat_session: "Sesión de chat"
+    attributes:
+      lead:
+        first_name: "Nombre"
+        last_name: "Apellido"
+        email: "Correo"
+        company: "Empresa"
+        job_title: "Cargo"
+        status: "Estado"
+      pipeline:
+        name: "Nombre"
+        status: "Estado"
+      campaign:
+        name: "Nombre"
+        status: "Estado"
+        channel: "Canal"
+      email_template:
+        name: "Nombre"
+        subject: "Asunto"
+        body: "Cuerpo"
+        locale: "Idioma"
+      chat_session:
+        status: "Estado"
+      chat_message:
+        content: "Contenido"
+        sent_at: "Enviado"
+    errors:
+      messages:
+        blank: "no puede estar en blanco"
+        invalid: "no es válido"
+        taken: "ya está en uso"
+        not_a_number: "no es un número"
+        too_short: "es demasiado corto"
+        too_long: "es demasiado largo"

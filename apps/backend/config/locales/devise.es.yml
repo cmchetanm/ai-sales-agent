@@ -1,0 +1,8 @@
+es:
+  devise:
+    sessions:
+      signed_in: "Inicio de sesión correcto"
+      signed_out: "Sesión cerrada"
+    failure:
+      unauthenticated: "Debes iniciar sesión o registrarte para continuar."
+

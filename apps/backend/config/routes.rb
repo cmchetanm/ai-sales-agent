@@ -76,7 +76,7 @@ Rails.application.routes.draw do
         namespace :integrations do
           resource :apollo, only: %i[create show]
           resource :discover, only: :create
-          resource :status, only: :show
+          resource :status, only: :show, controller: :status
         end
         post 'integrations/apollo', to: 'integrations/apollo#create'
         post 'integrations/discover', to: 'integrations/discover#create'
@@ -154,7 +154,7 @@ Rails.application.routes.draw do
       namespace :integrations do
         resource :apollo, only: %i[create show]
         resource :discover, only: :create
-        resource :status, only: :show
+        resource :status, only: :show, controller: :status
       end
       get  'integrations/apollo', to: 'integrations/apollo#show'
       post 'integrations/apollo', to: 'integrations/apollo#create'

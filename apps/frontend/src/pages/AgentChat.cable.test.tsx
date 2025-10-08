@@ -48,4 +48,16 @@ describe('AgentChat ActionCable', () => {
     receivedCb?.({ event: 'message.created', message: { id: 99, role: 'assistant', content: 'From Cable', sent_at: new Date().toISOString() } });
     expect(await screen.findByText('From Cable')).toBeInTheDocument();
   });
+
+  it('handles typing indicator events without errors', async () => {
+    render(
+      <MemoryRouter>
+        <AgentChat />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(receivedCb).toBeTypeOf('function'));
+    // Start typing
+    receivedCb?.({ event: 'typing', status: 'start', actor: 'assistant' });
+    receivedCb?.({ event: 'typing', status: 'stop', actor: 'assistant' });
+  });
 });

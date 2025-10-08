@@ -15,9 +15,12 @@ export const AgentChat = () => {
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [sessions, setSessions] = useState<{id:number; status:string}[]>([]);
-  const [apolloMode, setApolloMode] = useState<'live'|'sample'|'unknown'>('unknown');
+  const [apolloMode, setApolloMode] = useState<'live'|'sample'|'unauthorized'|'unknown'>('unknown');
+  const [apolloHint, setApolloHint] = useState<string | undefined>(undefined);
+  const [sessionStatus, setSessionStatus] = useState<string>('active');
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [remoteTyping, setRemoteTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [showScroll, setShowScroll] = useState(false);
@@ -43,11 +46,24 @@ export const AgentChat = () => {
   useEffect(() => {
     const init = async () => {
       if (!token) return;
+      // Resolve Apollo status with fallback paths
+      let mode: 'live'|'sample'|'unauthorized'|'unknown' = 'unknown';
+      let hint: string | undefined = undefined;
       try {
         const st = await api.apolloStatus(token);
-        if (st.ok && st.data) setApolloMode(st.data.apollo.mode);
-        else setApolloMode('unknown');
-      } catch { setApolloMode('unknown'); }
+        if (st.ok && st.data) {
+          mode = st.data.apollo.mode; hint = st.data.apollo.probe?.hint;
+        }
+      } catch {}
+      if (mode === 'unknown') {
+        try {
+          const st2 = await api.apolloStatusSimple(token);
+          if (st2.ok && st2.data) { mode = st2.data.mode as any; }
+        } catch {}
+      }
+      setApolloMode(mode);
+      setApolloHint(hint);
+
       const list = await api.chatSessionsIndex(token);
       if (list.ok && list.data) setSessions(list.data.chat_sessions || []);
       const stored = Number(localStorage.getItem('last_chat_session_id') || '');
@@ -57,13 +73,24 @@ export const AgentChat = () => {
           setSessionId(show.data.chat_session.id);
           const msgs = (show.data.chat_session.messages || []) as ChatMsg[];
           setMessages(msgs);
+          // Inferred status when resuming
+          setSessionStatus(show.data.chat_session.status || 'active');
           return;
         }
       }
       const res = await api.chatSessionCreate(token);
-      if (res.ok && res.data) setSessionId(res.data.chat_session.id);
+      if (res.ok && res.data) { setSessionId(res.data.chat_session.id); setSessionStatus('active'); }
     };
     init();
+    // Retry status once if still unknown
+    const t = setTimeout(() => {
+      if (apolloMode === 'unknown' && token) {
+        api.apolloStatus(token).then((st) => {
+          if (st.ok && st.data) setApolloMode(st.data.apollo.mode);
+        }).catch(() => {});
+      }
+    }, 3000);
+    return () => clearTimeout(t);
   }, [token]);
 
   // Subscribe to ActionCable updates for this chat session
@@ -81,6 +108,11 @@ export const AgentChat = () => {
               const exists = prev.some((m) => m.id === data.message.id);
               return exists ? prev : [...prev, data.message as ChatMsg];
             });
+            // Stop typing indicator once message arrives
+            setRemoteTyping(false);
+          }
+          if (data?.event === 'typing' && data?.actor === 'assistant') {
+            setRemoteTyping(data?.status === 'start');
           }
         }
       }
@@ -110,6 +142,32 @@ export const AgentChat = () => {
         setMessages((refreshed.data.messages || []) as ChatMsg[]);
       }
     } catch {}
+  };
+
+  const refreshSessions = async () => {
+    if (!token) return;
+    const list = await api.chatSessionsIndex(token);
+    if (list.ok && list.data) setSessions(list.data.chat_sessions || []);
+    if (sessionId) {
+      const show = await api.chatSessionShow(token, sessionId);
+      if (show.ok && show.data) setSessionStatus(show.data.chat_session.status || sessionStatus);
+    }
+  };
+
+  const pauseSession = async () => {
+    if (!token || !sessionId) return;
+    const res = await api.chatSessionPause(token, sessionId);
+    if (res.ok && res.data) { setSessionStatus(res.data.chat_session.status); refreshSessions(); }
+  };
+  const resumeSession = async () => {
+    if (!token || !sessionId) return;
+    const res = await api.chatSessionResume(token, sessionId);
+    if (res.ok && res.data) { setSessionStatus(res.data.chat_session.status); refreshSessions(); }
+  };
+  const completeSession = async () => {
+    if (!token || !sessionId) return;
+    const res = await api.chatSessionComplete(token, sessionId);
+    if (res.ok && res.data) { setSessionStatus(res.data.chat_session.status); refreshSessions(); }
   };
 
   const createSession = async () => {
@@ -142,7 +200,8 @@ export const AgentChat = () => {
     <Stack spacing={2}>
       <Stack direction="row" spacing={2} alignItems="center">
         <Typography variant="h5" fontWeight={800}>{t('chat.title')}</Typography>
-        <Chip size="small" color={apolloMode === 'live' ? 'success' : (apolloMode === 'sample' ? 'default' : 'warning')} label={`Apollo: ${apolloMode === 'unknown' ? 'checking' : apolloMode}`} />
+        <Chip size="small" color={apolloMode === 'live' ? 'success' : apolloMode === 'unauthorized' ? 'error' : (apolloMode === 'sample' ? 'default' : 'warning')} label={`Apollo: ${apolloMode === 'unknown' ? 'checking' : apolloMode}${apolloHint ? ` (${apolloHint})` : ''}`} />
+        <Chip size="small" label={`Session: ${sessionStatus}`} />
         <FormControl size="small" sx={{ minWidth: 160 }}>
           <InputLabel id="session-select">Session</InputLabel>
           <Select labelId="session-select" label="Session" value={sessionId || ''}
@@ -155,6 +214,21 @@ export const AgentChat = () => {
         <Tooltip title="Start a new chat session">
           <Chip label="New Session" color="primary" onClick={createSession} />
         </Tooltip>
+        <Tooltip title="Pause this chat">
+          <span>
+            <Chip label="Pause" onClick={pauseSession} disabled={!sessionId || sessionStatus !== 'active'} />
+          </span>
+        </Tooltip>
+        <Tooltip title="Resume this chat">
+          <span>
+            <Chip label="Resume" onClick={resumeSession} disabled={!sessionId || sessionStatus !== 'paused'} />
+          </span>
+        </Tooltip>
+        <Tooltip title="Complete this chat">
+          <span>
+            <Chip label="Complete" color="success" onClick={completeSession} disabled={!sessionId || sessionStatus === 'completed'} />
+          </span>
+        </Tooltip>
       </Stack>
       <Card className="glass" sx={{ position: 'relative' }}>
         {sending && <LinearProgress color="secondary" />}
@@ -163,9 +237,9 @@ export const AgentChat = () => {
             {messages.map((m, i) => (
               <ChatBubble key={i} role={m.role} content={m.content} timestamp={m.sent_at} />
             ))}
-            {sending && (
+            {(sending || remoteTyping) && (
               <div style={{ alignSelf: 'flex-start' }}>
-                <div className="typing">
+                <div className="typing" data-testid="typing">
                   <span className="dot" />
                   <span className="dot" />
                   <span className="dot" />

@@ -1,0 +1,8 @@
+fr:
+  devise:
+    sessions:
+      signed_in: "Connexion réussie"
+      signed_out: "Déconnexion réussie"
+    failure:
+      unauthenticated: "Vous devez vous connecter ou vous inscrire pour continuer."
+

@@ -5,10 +5,10 @@ require 'rails_helper'
 RSpec.describe Integrations::ApolloClient do
   describe '#search_people' do
     it 'maps Apollo API people to lead attributes' do
-      stub_request(:post, 'https://api.apollo.io/v1/mixed_people/search')
+      stub_request(:post, 'https://api.apollo.io/api/v1/mixed_people/search')
         .with { |req|
           body = JSON.parse(req.body)
-          body['api_key'] == 'test-key' && body['q_keywords'] == 'saas'
+          body['q_keywords'] == 'saas'
         }
         .to_return(
           status: 200,

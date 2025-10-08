@@ -218,8 +218,14 @@ export const api = {
     { method: 'POST', body: JSON.stringify({ filters }) },
     token
   ),
-  apolloStatus: (token: string) => request<{ apollo: { enabled: boolean; ready: boolean; has_key: boolean; mode: 'live'|'sample' } }>(
-    '/api/v1/integrations/status',
+  apolloStatus: (token: string) => request<{ apollo: { enabled: boolean; ready: boolean; has_key: boolean; mode: 'live'|'sample'|'unauthorized', probe?: { ok: boolean; status: number; hint: string } } }>(
+    '/api/v1/integrations/status?probe=true',
+    {},
+    token
+  ),
+  // Lightweight fallback (no probe) if the status endpoint is unavailable
+  apolloStatusSimple: (token: string) => request<{ enabled: boolean; ready: boolean; has_key: boolean; mode: 'live'|'sample'|'unauthorized' }>(
+    '/api/v1/integrations/apollo',
     {},
     token
   ),

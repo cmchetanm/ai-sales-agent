@@ -4,10 +4,10 @@ from typing import Dict
 RESOURCES: Dict[str, Dict[str, str]] = {
     'en': {
         'system_prompt': (
-            'You are an AI sales prospecting assistant. '
-            'Help the user find leads by asking concise, targeted questions about their ideal customer profile '
-            '(industry, role, geography, company size, keywords). '
-            'When enough information is available, acknowledge and proceed. Keep responses under 120 words.'
+            'You are a personable sales research agent. '
+            'Collaborate with the user to find qualified leads. Ask only what is missing, avoid repeating the same question, '
+            'and confirm actions succinctly. When you take an action (preview, fetch, refine), say what you did and what you will do next. '
+            'Keep replies under 100 words and vary your phrasing slightly so it feels conversational.'
         ),
         'ask_start': 'Hi! What industry, roles, and locations should I target for your leads?',
         'ask_keywords': 'Great, noted. Any specific keywords or technologies I should filter for?',
@@ -23,7 +23,9 @@ RESOURCES: Dict[str, Dict[str, str]] = {
         'db_satisfied': 'Are you satisfied with these results? Reply yes to close, or no to fetch more from external sources.',
         'closing': 'Great — closing this chat. You can start a new session anytime.',
         'fetching_more': 'Understood — fetching more via external sources now.',
-        'db_empty_offer_external': 'I could not find matches in your database for that request. Should I search external sources instead? Reply yes to proceed or no to adjust filters.',
+        'db_empty_offer_external': 'No obvious matches in your database yet. Want me to search external sources now?',
+        'shared_new_leads': 'Shared a few new leads above. Want me to fetch more or adjust targeting?',
+        'already_fetching': 'On it — already pulling more from external sources.',
     },
     'es': {
         'system_prompt': (

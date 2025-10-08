@@ -19,8 +19,18 @@ module Api
         context = session.chat_messages.order(created_at: :desc).limit(20).reverse.map do |m|
           { role: m.sender_type == 'User' ? 'user' : 'assistant', content: m.content.to_s }
         end
+        # Broadcast typing start
+        begin
+          ActionCable.server.broadcast("chat_session:#{session.id}", { event: 'typing', status: 'start', actor: 'assistant' })
+        rescue StandardError
+        end
         reply = llm.reply(session_id: session.id, account_id: current_account.id, user_id: current_user&.id, messages: context)
         assistant_msg = session.chat_messages.create!(sender_type: 'Assistant', content: reply, sent_at: Time.current)
+        # Broadcast typing stop
+        begin
+          ActionCable.server.broadcast("chat_session:#{session.id}", { event: 'typing', status: 'stop', actor: 'assistant' })
+        rescue StandardError
+        end
 
         render json: {
           user: serialize_message(user_msg),

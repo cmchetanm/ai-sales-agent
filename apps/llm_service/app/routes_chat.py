@@ -57,7 +57,15 @@ def _generate_reply(messages: List[Dict], locale: str) -> str:
 def _extract_filters(text: str) -> Dict[str, str]:
     t = text.lower()
     role = 'cto' if 'cto' in t or 'engineering' in t else ('marketing' if 'marketing' in t else '')
-    location = 'us' if 'us' in t or 'united states' in t else ('india' if 'india' in t else '')
+    # Normalize to full country names for vendor compatibility
+    if 'united states' in t or ' us' in t or 'usa' in t:
+        location = 'United States'
+    elif 'india' in t:
+        location = 'India'
+    elif 'united kingdom' in t or ' uk' in t:
+        location = 'United Kingdom'
+    else:
+        location = ''
     keywords = ''
     return {"role": role, "location": location, "keywords": keywords}
 
@@ -96,7 +104,7 @@ _SESSION_STATE: dict[str, dict] = {}
 def _get_state(session_id: str) -> dict:
     st = _SESSION_STATE.get(session_id)
     if not st:
-        st = {"step": "collecting", "discover_ts": 0.0, "last_filters": {}, "await_kind": None}
+        st = {"step": "collecting", "discover_ts": 0.0, "last_filters": {}, "await_kind": None, "phase": "collecting", "db_empty_ts": 0.0}
         _SESSION_STATE[session_id] = st
     return st
 
@@ -260,8 +268,7 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
                 if queued and not duplicate:
                     st["discover_ts"] = time.time()
                     st["step"] = "collecting"
-                    created = body.get("created") if isinstance(body, dict) else None
-                    extra = f" ({created} new leads)" if isinstance(created, int) else ""
+                    st["phase"] = "external_fetching"
                     # If we have a sample of leads, push a follow-up assistant message to the chat
                     sample = body.get("sample") if isinstance(body, dict) else None
                     if isinstance(sample, list) and sample:
@@ -274,9 +281,10 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
                             "/api/v1/internal/chat_notify",
                             {"account_id": req.account_id, "chat_session_id": req.session_id, "content": "New leads found:\n" + "\n".join(bullets)},
                         )
-                    return ChatResponse(reply=t('fetching_more', locale) + extra, session_id=req.session_id)
+                    st["phase"] = "external_done"
+                    return ChatResponse(reply=t('shared_new_leads', locale), session_id=req.session_id)
                 if duplicate or (time.time() - st.get("discover_ts", 0)) < _DISCOVERY_TTL_SECONDS:
-                    return ChatResponse(reply="On it — already fetching from external sources.", session_id=req.session_id)
+                    return ChatResponse(reply=t('already_fetching', locale), session_id=req.session_id)
         elif kind == "external_offer":
             if any(w in lower for w in yes_words + ["search", "go ahead", "do it", "fetch", "apollo", "apollo.io"]):
                 filters = st.get("last_filters") or _extract_filters_from_messages([m.model_dump() for m in req.messages])
@@ -284,8 +292,7 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
                 if queued and not duplicate:
                     st["discover_ts"] = time.time()
                     st["step"] = "collecting"
-                    created = body.get("created") if isinstance(body, dict) else None
-                    extra = f" ({created} new leads)" if isinstance(created, int) else ""
+                    st["phase"] = "external_fetching"
                     sample = body.get("sample") if isinstance(body, dict) else None
                     if isinstance(sample, list) and sample:
                         bullets = []
@@ -297,7 +304,8 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
                             "/api/v1/internal/chat_notify",
                             {"account_id": req.account_id, "chat_session_id": req.session_id, "content": "New leads found:\n" + "\n".join(bullets)},
                         )
-                    return ChatResponse(reply=t('fetching_more', locale) + extra, session_id=req.session_id)
+                    st["phase"] = "external_done"
+                    return ChatResponse(reply=t('shared_new_leads', locale), session_id=req.session_id)
                 if duplicate or (time.time() - st.get("discover_ts", 0)) < _DISCOVERY_TTL_SECONDS:
                     return ChatResponse(reply="On it — already fetching from external sources.", session_id=req.session_id)
             if any(w in lower for w in ["no", "adjust", "change", "refine", "different", "another"]):
@@ -339,6 +347,16 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
                 else:
                     # No DB results; ask whether to search external instead of auto-queuing
                     st["await_kind"] = "external_offer"
-                    return ChatResponse(reply=t('db_empty_offer_external', locale), session_id=req.session_id)
+                    now = time.time()
+                    if now - st.get("db_empty_ts", 0.0) > 60:
+                        st["db_empty_ts"] = now
+                        return ChatResponse(reply=t('db_empty_offer_external', locale), session_id=req.session_id)
+                    # If we recently asked the same thing, do not repeat; move to external fetch
+                    queued, duplicate, queued_status, body = _queue_discovery_once(req.account_id, req.session_id, filters)
+                    if queued and not duplicate:
+                        st["discover_ts"] = now
+                        st["phase"] = "external_fetching"
+                        return ChatResponse(reply=t('fetching_more', locale), session_id=req.session_id)
+                    return ChatResponse(reply=t('already_fetching', locale), session_id=req.session_id)
             # If preview call failed, keep previous heuristic reply
     return ChatResponse(reply=reply, session_id=req.session_id)

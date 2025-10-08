@@ -33,3 +33,66 @@ en:
     not_authorized: "Not authorized"
     not_found: "Not found"
     bad_request: "Bad request"
+  api:
+    status:
+      ok: "ok"
+      queued: "queued"
+      created: "created"
+      updated: "updated"
+      deleted: "deleted"
+  datetime:
+    formats:
+      default: "%Y-%m-%d %H:%M:%S"
+      short: "%b %d %H:%M"
+      long: "%B %d, %Y %H:%M"
+  date:
+    formats:
+      default: "%Y-%m-%d"
+      long: "%B %d, %Y"
+      short: "%b %d"
+  time:
+    formats:
+      default: "%H:%M"
+  activerecord:
+    models:
+      account: "Account"
+      user: "User"
+      lead: "Lead"
+      pipeline: "Pipeline"
+      campaign: "Campaign"
+      email_template: "Email template"
+      chat_message: "Chat message"
+      chat_session: "Chat session"
+    attributes:
+      lead:
+        first_name: "First name"
+        last_name: "Last name"
+        email: "Email"
+        company: "Company"
+        job_title: "Job title"
+        status: "Status"
+      pipeline:
+        name: "Name"
+        status: "Status"
+      campaign:
+        name: "Name"
+        status: "Status"
+        channel: "Channel"
+      email_template:
+        name: "Name"
+        subject: "Subject"
+        body: "Body"
+        locale: "Locale"
+      chat_session:
+        status: "Status"
+      chat_message:
+        content: "Content"
+        sent_at: "Sent at"
+    errors:
+      messages:
+        blank: "can't be blank"
+        invalid: "is invalid"
+        taken: "has already been taken"
+        not_a_number: "is not a number"
+        too_short: "is too short"
+        too_long: "is too long"
