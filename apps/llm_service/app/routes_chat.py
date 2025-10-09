@@ -13,6 +13,7 @@ import random
 USE_OPENAI = bool(os.getenv("OPENAI_API_KEY"))
 LLM_STRICT = (os.getenv("LLM_STRICT", "").lower() == "true")
 LLM_AUTONOTIFY = (os.getenv("LLM_AUTONOTIFY", "true").lower() == "true")
+LLM_AUTOSTART = (os.getenv("LLM_AUTOSTART", "true").lower() == "true")
 llm = None
 if USE_OPENAI:
     try:
@@ -455,6 +456,51 @@ def _ai_orchestrate_reply(req: ChatRequest, locale: str) -> str:
         # Fallback to heuristic
         context = [{"role": "system", "content": system_prompt(locale)}] + [m.model_dump() for m in req.messages]
         return _generate_reply(context, locale)
+
+    # If configured, proactively start with DB preview (then discover) when the user provided obvious targets
+    try:
+        if LLM_AUTOSTART:
+            last_user = next((m.content for m in req.messages[::-1] if m.role == 'user'), "")
+            hint = (last_user or '').lower()
+            if any(k in hint for k in ['cto', 'vp engineering', 'united states', 'us', 'saas', 'ai', 'find', 'search', 'target']):
+                filters = _extract_filters_from_messages([m.model_dump() for m in req.messages])
+                if not any(filters.values()):
+                    filters = _extract_filters(last_user)
+                # Preview
+                ok, code, data = _post_internal_json(
+                    "/api/v1/internal/db_preview_leads",
+                    {"account_id": req.account_id, "filters": filters, "limit": 5},
+                )
+                total = (data or {}).get('total', 0) if ok else 0
+                shown = False
+                if ok and total and (data or {}).get('results'):
+                    bullets = []
+                    for r in (data or {}).get('results', [])[:5]:
+                        name = ((r.get('first_name') or '') + ' ' + (r.get('last_name') or '')).strip()
+                        bullets.append(f"- {name or '(No name)'} — {r.get('company') or ''} — {r.get('email') or ''}")
+                    _post_internal(
+                        "/api/v1/internal/chat_notify",
+                        {"account_id": req.account_id, "chat_session_id": req.session_id, "content": t('db_preview_intro', locale) + "\n" + "\n".join(bullets)},
+                    )
+                    shown = True
+                if total == 0:
+                    # Discover immediately (sync in dev)
+                    queued, duplicate, queued_status, body = _queue_discovery_once(req.account_id, req.session_id, filters)
+                    sample = (body or {}).get('sample') if queued and isinstance(body, dict) else None
+                    if isinstance(sample, list) and sample:
+                        bullets = []
+                        for r in sample[:5]:
+                            name = ((r.get('first_name') or '') + ' ' + (r.get('last_name') or '')).strip()
+                            bullets.append(f"- {name or '(No name)'} — {r.get('company') or ''} — {r.get('email') or ''}")
+                        _post_internal(
+                            "/api/v1/internal/chat_notify",
+                            {"account_id": req.account_id, "chat_session_id": req.session_id, "content": "New leads found:\n" + "\n".join(bullets)},
+                        )
+                        shown = True
+                if shown:
+                    return t('shared_new_leads', locale)
+    except Exception:
+        pass
 
     # Build messages with an extra system instruction to use tools thoughtfully
     from langchain.schema import HumanMessage, SystemMessage, AIMessage
