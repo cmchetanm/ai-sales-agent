@@ -11,6 +11,7 @@ import random
 
 USE_OPENAI = bool(os.getenv("OPENAI_API_KEY"))
 LLM_STRICT = (os.getenv("LLM_STRICT", "").lower() == "true")
+LLM_AUTONOTIFY = (os.getenv("LLM_AUTONOTIFY", "true").lower() == "true")
 llm = None
 if USE_OPENAI:
     try:
@@ -325,13 +326,31 @@ def _make_tools(account_id: int, session_id: str, locale: str):
     class ProfileInput(BaseModel):
         free_text: str = Field(description="User preference text to store in profile questionnaire.free_text")
 
+    def _format_bullets(rows: list[dict], limit: int = 5) -> str:
+        bullets = []
+        for r in (rows or [])[:limit]:
+            name = ((str(r.get('first_name') or '') + ' ' + str(r.get('last_name') or '')).strip()) or '(No name)'
+            line = f"- {name} — {r.get('company') or ''} — {r.get('email') or ''}"
+            bullets.append(line)
+        return "\n".join(bullets)
+
     def tool_db_preview(filters: PreviewInput) -> dict:
         ok, status, data = _post_internal_json(
             "/api/v1/internal/db_preview_leads",
             {"account_id": account_id, "filters": filters.model_dump(exclude_none=True), "limit": filters.limit},
         )
         if ok and isinstance(data, dict):
-            return {"status": "ok", "total": data.get("total", 0), "results": data.get("results", [])}
+            out = {"status": "ok", "total": data.get("total", 0), "results": data.get("results", [])}
+            try:
+                if LLM_AUTONOTIFY and out["total"] and out["results"]:
+                    content = t('db_preview_intro', locale) + "\n" + _format_bullets(out["results"])
+                    _post_internal(
+                        "/api/v1/internal/chat_notify",
+                        {"account_id": account_id, "chat_session_id": session_id, "content": content},
+                    )
+            except Exception:
+                pass
+            return out
         return {"status": "error", "code": status}
 
     def tool_discover(inp: DiscoverInput) -> dict:
@@ -340,6 +359,15 @@ def _make_tools(account_id: int, session_id: str, locale: str):
         out = {"queued": queued, "duplicate": duplicate, "status": queued_status}
         if isinstance(body, dict) and body.get("sample"):
             out["sample"] = body.get("sample")
+            try:
+                if LLM_AUTONOTIFY:
+                    content = "New leads found:\n" + _format_bullets(out["sample"]) 
+                    _post_internal(
+                        "/api/v1/internal/chat_notify",
+                        {"account_id": account_id, "chat_session_id": session_id, "content": content},
+                    )
+            except Exception:
+                pass
         return out
 
     def tool_chat_notify(inp: NotifyInput) -> dict:
