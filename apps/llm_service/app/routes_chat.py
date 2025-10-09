@@ -7,6 +7,7 @@ from .i18n import normalize_locale, t
 import time
 import json
 from dataclasses import dataclass
+import os
 import random
 
 USE_OPENAI = bool(os.getenv("OPENAI_API_KEY"))
@@ -503,6 +504,33 @@ def _ai_orchestrate_reply(req: ChatRequest, locale: str) -> str:
 
     # Track actions so we can synthesize a short, action-based summary if the model doesn't conclude
     actions = {"notified": False, "sample_count": 0, "discovered": False, "preview_total": None}
+    debug = bool(os.getenv("LLM_DEBUG", "").lower() == "true")
+
+    def _find_tool(name: str):
+        if not name:
+            return None
+        # exact match
+        tool = next((t for t in tools if getattr(t, "name", None) == name), None)
+        if tool:
+            return tool
+        # common aliases
+        aliases = {
+            "db_preview": "db_preview_leads",
+            "preview_db": "db_preview_leads",
+            "preview_leads": "db_preview_leads",
+            "discover": "discover_leads",
+            "fetch_leads": "discover_leads",
+            "search_external": "discover_leads",
+            "notify": "chat_notify",
+            "share_results": "chat_notify",
+            "save_preferences": "profile_update",
+            "save_profile": "profile_update",
+            "close": "close_chat",
+        }
+        mapped = aliases.get(name)
+        if mapped:
+            return next((t for t in tools if getattr(t, "name", None) == mapped), None)
+        return None
     for _ in range(6):  # allow a few tool/reflection steps
         try:
             res = model.invoke(msgs)
@@ -517,6 +545,11 @@ def _ai_orchestrate_reply(req: ChatRequest, locale: str) -> str:
             return getattr(res, "content", t('ask_missing', locale))
         # Append the assistant message containing tool_calls, as required by OpenAI
         msgs.append(res)
+        if debug:
+            try:
+                print(f"LLM tool_calls: {getattr(res, 'tool_calls', None)}")
+            except Exception:
+                pass
         # Execute each tool call and append ToolMessage
         for call in res.tool_calls:
             try:
@@ -528,7 +561,7 @@ def _ai_orchestrate_reply(req: ChatRequest, locale: str) -> str:
                 msgs.append(ToolMessage(content=json.dumps({"error": "malformed_tool_call"}), tool_call_id="malformed"))
                 continue
             # Find the tool by name
-            tool = next((t for t in tools if getattr(t, "name", None) == name), None)
+            tool = _find_tool(name)
             if not tool:
                 # Unknown tool; surface gentle error so model can recover
                 msgs.append(ToolMessage(content=json.dumps({"error": "unknown_tool", "name": name}), tool_call_id=call_id))
