@@ -1,16 +1,24 @@
 import os
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, HTTPException
 from .schemas import ChatRequest, ChatResponse
-from typing import List, Dict
+from typing import List, Dict, Optional
 import httpx
 from .i18n import normalize_locale, t
 import time
+import json
+from dataclasses import dataclass
+import random
 
 USE_OPENAI = bool(os.getenv("OPENAI_API_KEY"))
+LLM_STRICT = (os.getenv("LLM_STRICT", "").lower() == "true")
 llm = None
 if USE_OPENAI:
     try:
         from langchain_openai import ChatOpenAI
+        from langchain.tools import StructuredTool
+        from pydantic import BaseModel, Field
+        from langchain.schema import HumanMessage, SystemMessage, AIMessage
+        from langchain_core.messages import ToolMessage
 
         llm = ChatOpenAI(model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"), temperature=0.2)
     except Exception as e:
@@ -24,34 +32,74 @@ def system_prompt(locale: str) -> str:
     return t('system_prompt', locale)
 
 
+def _varied(key: str, locale: str, alts: List[str] | None = None) -> str:
+    base = t(key, locale)
+    options = [base]
+    if alts:
+        options.extend([a for a in alts if a and a not in options])
+    return random.choice(options)
+
+
 def _generate_reply(messages: List[Dict], locale: str) -> str:
     if llm is not None:
-        # Map to LangChain messages
-        from langchain.schema import HumanMessage, SystemMessage, AIMessage
-
-        def to_lc(m: Dict):
-            if m["role"] == "system":
-                return SystemMessage(content=m["content"])
-            if m["role"] == "assistant":
-                return AIMessage(content=m["content"])
-            return HumanMessage(content=m["content"])
-
-        lc_messages = [to_lc(m) for m in messages]
+        # If OpenAI is configured but we didn't pass account/session context,
+        # do a simple non-tool call generation.
         try:
+            from langchain.schema import HumanMessage, SystemMessage, AIMessage
+
+            def to_lc(m: Dict):
+                if m["role"] == "system":
+                    return SystemMessage(content=m["content"])
+                if m["role"] == "assistant":
+                    return AIMessage(content=m["content"])
+                return HumanMessage(content=m["content"])
+
+            lc_messages = [to_lc(m) for m in messages]
             result = llm.invoke(lc_messages)
             return getattr(result, "content", t('ask_missing', locale))
         except Exception:
+            # fall back to heuristic
             pass
     # If OpenAI is configured, you could swap in LangChain/OpenAI here.
     # To keep this service portable, reply with a lightweight heuristic.
     last_user = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
     if not last_user:
-        return t('ask_start', locale)
-    # Very simple branching to simulate helpfulness
+        # Slight phrasing variety so it feels less robotic in fallback
+        starts = [
+            t('ask_start', locale),
+            t('ask_missing', locale),
+        ]
+        return random.choice(starts)
+
+    # Lightweight conversational fallback: acknowledge targets if we can infer them,
+    # then ask for keywords. Otherwise, ask for missing details with slight variety.
     lower = last_user.lower()
+    filters = _extract_filters(last_user)
+    if any(filters.values()):
+        prefaces = ["Got it —", "Noted —", "Great —"]
+        parts: list[str] = []
+        role = filters.get("role") or ""
+        loc = filters.get("location") or ""
+        if role:
+            parts.append(role.upper())
+        if loc:
+            parts.append(loc)
+        target = ", ".join(parts)
+        # Keep the second sentence localized
+        if target:
+            return f"{random.choice(prefaces)} targeting {target}. " + t('ask_keywords', locale)
+        return t('ask_keywords', locale)
+
+    # If the user mentions typical targeting hints, keep the conversation moving
     if any(k in lower for k in ["industry", "role", "location", "geo", "size", "company"]):
         return t('ask_keywords', locale)
-    return t('ask_missing', locale)
+
+    # Default prompt (slight variety) when we cannot infer targets
+    missing = [
+        t('ask_missing', locale),
+        t('ask_industry', locale),
+    ]
+    return random.choice(missing)
 
 
 def _extract_filters(text: str) -> Dict[str, str]:
@@ -243,12 +291,240 @@ def _post_internal_json(path: str, payload: Dict) -> tuple[bool, int, Dict]:
     return (False, 403 if any(tokens) else -1, {})
 
 
+def _make_tools(account_id: int, session_id: str, locale: str):
+    """Define tool functions that call backend internal endpoints.
+
+    These are exposed to the LLM (when available) so it can orchestrate actions.
+    """
+    if llm is None:
+        return []
+
+    from langchain.tools import StructuredTool
+    from pydantic import BaseModel, Field
+
+    class Filters(BaseModel):
+        keywords: Optional[str] = Field(default=None, description="Keyword string, e.g., 'saas ai'")
+        role: Optional[str] = Field(default=None, description="Target job title, e.g., 'CTO'")
+        location: Optional[str] = Field(default=None, description="Preferred location or country, e.g., 'United States'")
+
+    class PreviewInput(Filters):
+        limit: int = Field(default=5, ge=1, le=10, description="Max rows to preview from DB (1-10)")
+
+    class DiscoverInput(Filters):
+        pass
+
+    class NotifyInput(BaseModel):
+        content: str = Field(description="Assistant message to post into the chat (supports bullets)")
+
+    class ProfileInput(BaseModel):
+        free_text: str = Field(description="User preference text to store in profile questionnaire.free_text")
+
+    def tool_db_preview(filters: PreviewInput) -> dict:
+        ok, status, data = _post_internal_json(
+            "/api/v1/internal/db_preview_leads",
+            {"account_id": account_id, "filters": filters.model_dump(exclude_none=True), "limit": filters.limit},
+        )
+        if ok and isinstance(data, dict):
+            return {"status": "ok", "total": data.get("total", 0), "results": data.get("results", [])}
+        return {"status": "error", "code": status}
+
+    def tool_discover(inp: DiscoverInput) -> dict:
+        filters = inp.model_dump(exclude_none=True)
+        queued, duplicate, queued_status, body = _queue_discovery_once(account_id, session_id, filters)
+        out = {"queued": queued, "duplicate": duplicate, "status": queued_status}
+        if isinstance(body, dict) and body.get("sample"):
+            out["sample"] = body.get("sample")
+        return out
+
+    def tool_chat_notify(inp: NotifyInput) -> dict:
+        ok, status = _post_internal(
+            "/api/v1/internal/chat_notify",
+            {"account_id": account_id, "chat_session_id": session_id, "content": inp.content},
+        )
+        return {"status": "ok" if ok else "error", "code": status}
+
+    def tool_close_chat() -> dict:
+        ok, status = _post_internal(
+            "/api/v1/internal/close_chat",
+            {"account_id": account_id, "chat_session_id": session_id},
+        )
+        return {"status": "ok" if ok else "error", "code": status}
+
+    def tool_profile_update(inp: ProfileInput) -> dict:
+        ok, status = _post_internal(
+            "/api/v1/internal/profile_update",
+            {"account_id": account_id, "profile": {"questionnaire": {"free_text": inp.free_text}}},
+        )
+        return {"status": "ok" if ok else "error", "code": status}
+
+    return [
+        StructuredTool.from_function(
+            name="db_preview_leads",
+            description=(
+                "Preview potential leads from the user's own database first. "
+                "Use this to show a quick sample before deciding to fetch externally. "
+                "You MUST summarize results to the user via chat_notify when useful."
+            ),
+            func=tool_db_preview,
+            args_schema=PreviewInput,
+        ),
+        StructuredTool.from_function(
+            name="discover_leads",
+            description=(
+                "Fetch more leads using external providers via the backend (Apollo, HubSpot, Salesforce). "
+                "Call this when DB preview is empty or the user wants more. "
+                "After a successful fetch, summarize a few leads via chat_notify."
+            ),
+            func=tool_discover,
+            args_schema=DiscoverInput,
+        ),
+        StructuredTool.from_function(
+            name="chat_notify",
+            description=(
+                "Post a message in the chat visible to the user. "
+                "Use this to share bullets of found leads or confirm actions."
+            ),
+            func=tool_chat_notify,
+            args_schema=NotifyInput,
+        ),
+        StructuredTool.from_function(
+            name="close_chat",
+            description=(
+                "Mark the current chat session as completed when the user is satisfied."
+            ),
+            func=tool_close_chat,
+        ),
+        StructuredTool.from_function(
+            name="profile_update",
+            description=(
+                "Save free-form user preferences to their profile for future context."
+            ),
+            func=tool_profile_update,
+            args_schema=ProfileInput,
+        ),
+    ]
+
+
+def _ai_orchestrate_reply(req: ChatRequest, locale: str) -> str:
+    """Run an agentic loop with tools so the model can act autonomously.
+
+    Falls back to heuristic if llm/tools unavailable.
+    """
+    if llm is None:
+        if LLM_STRICT:
+            raise HTTPException(status_code=503, detail={"error": "llm_unavailable"})
+        # Fallback to heuristic
+        context = [{"role": "system", "content": system_prompt(locale)}] + [m.model_dump() for m in req.messages]
+        return _generate_reply(context, locale)
+
+    # Build messages with an extra system instruction to use tools thoughtfully
+    from langchain.schema import HumanMessage, SystemMessage, AIMessage
+    from langchain_core.messages import ToolMessage
+
+    sys_msgs = [
+        SystemMessage(content=system_prompt(locale)),
+        SystemMessage(content=(
+            "You have tools to preview DB leads, discover external leads (Apollo/HubSpot/Salesforce), "
+            "post messages back to the chat, update profile, and close the chat. "
+            "Use tools when they help. Share concise bullets when showing leads."
+        )),
+    ]
+    def to_lc(m: Dict):
+        if m["role"] == "system":
+            return SystemMessage(content=m["content"])
+        if m["role"] == "assistant":
+            return AIMessage(content=m["content"])
+        return HumanMessage(content=m["content"])
+
+    msgs = sys_msgs + [to_lc(m.model_dump()) for m in req.messages]
+    tools = _make_tools(req.account_id, req.session_id, locale)
+    try:
+        model = llm.bind_tools(tools)
+    except Exception as e:
+        if LLM_STRICT:
+            raise HTTPException(status_code=503, detail={"error": "llm_bind_failed", "message": str(e)[:200]})
+        # If binding tools fails (e.g., incompatible SDK), fallback to simple generation
+        context = [{"role": "system", "content": system_prompt(locale)}] + [m.model_dump() for m in req.messages]
+        return _generate_reply(context, locale)
+
+    # Save the last user message into profile as lightweight memory
+    try:
+        last_user = next((m.content for m in req.messages[::-1] if m.role == 'user'), "")
+        if last_user:
+            _post_internal(
+                "/api/v1/internal/profile_update",
+                {"account_id": req.account_id, "profile": {"questionnaire": {"free_text": last_user}}},
+            )
+    except Exception:
+        pass
+
+    def _tc_get(call, key: str, default=None):
+        if isinstance(call, dict):
+            return call.get(key, default)
+        return getattr(call, key, default)
+
+    for _ in range(4):  # small, safe loop
+        try:
+            res = model.invoke(msgs)
+        except Exception as e:
+            # Model invocation failed (e.g., invalid/missing key)
+            if LLM_STRICT:
+                raise HTTPException(status_code=503, detail={"error": "llm_invoke_failed", "message": str(e)[:200]})
+            context = [{"role": "system", "content": system_prompt(locale)}] + [m.model_dump() for m in req.messages]
+            return _generate_reply(context, locale)
+        # If the model returned a final answer
+        if not getattr(res, "tool_calls", None):
+            return getattr(res, "content", t('ask_missing', locale))
+        # Append the assistant message containing tool_calls, as required by OpenAI
+        msgs.append(res)
+        # Execute each tool call and append ToolMessage
+        for call in res.tool_calls:
+            try:
+                name = _tc_get(call, "name")
+                args = _tc_get(call, "args") or {}
+                call_id = _tc_get(call, "id") or name or "tool"
+            except Exception:
+                # Malformed tool call; let model recover
+                msgs.append(ToolMessage(content=json.dumps({"error": "malformed_tool_call"}), tool_call_id="malformed"))
+                continue
+            # Find the tool by name
+            tool = next((t for t in tools if getattr(t, "name", None) == name), None)
+            if not tool:
+                # Unknown tool; surface gentle error so model can recover
+                msgs.append(ToolMessage(content=json.dumps({"error": "unknown_tool", "name": name}), tool_call_id=call_id))
+                continue
+            try:
+                result = tool.invoke(args)
+            except Exception as e:
+                result = {"status": "error", "message": str(e)}
+            # Ensure short payload back to the model
+            compact = result
+            try:
+                payload = json.dumps(compact)
+            except Exception:
+                payload = json.dumps({"status": "error", "message": "unserializable tool result"})
+            msgs.append(ToolMessage(content=payload[:4000], tool_call_id=call_id))
+        # continue loop for model to reflect tool outputs
+    # Safety fallback answer if we reached max iterations
+    if LLM_STRICT:
+        raise HTTPException(status_code=503, detail={"error": "llm_no_conclusion"})
+    return t('ask_missing', locale)
+
+
 @router.post("/messages", response_model=ChatResponse)
 async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
     locale = normalize_locale(request.headers.get('accept-language'))
-    context = [{"role": "system", "content": system_prompt(locale)}] + [m.model_dump() for m in req.messages]
-    reply = _generate_reply(context, locale)
-    # Heuristic tool use: if user provided targeting details, preview DB, then queue if needed
+    # Prefer AI-orchestrated flow (strict mode may error if LLM unavailable)
+    if llm is not None or LLM_STRICT:
+        reply = _ai_orchestrate_reply(req, locale)
+    else:
+        context = [{"role": "system", "content": system_prompt(locale)}] + [m.model_dump() for m in req.messages]
+        reply = _generate_reply(context, locale)
+    # If AI tools produced the reply, return immediately to avoid duplicate heuristics.
+    if llm is not None or LLM_STRICT:
+        return ChatResponse(reply=reply, session_id=req.session_id)
+
+    # Legacy heuristic path (kept for environments without AI tools).
     st = _get_state(req.session_id)
     last_user = next((m.content for m in req.messages[::-1] if m.role == 'user'), "")
     if last_user and st.get("step") == "await_confirmation":
@@ -260,7 +536,10 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
             if any(w in lower for w in yes_words + ["looks good", "good", "great", "satisfied", "close", "done"]):
                 _post_internal("/api/v1/internal/close_chat", {"account_id": req.account_id, "chat_session_id": req.session_id})
                 st["step"] = "completed"
-                return ChatResponse(reply=t('closing', locale), session_id=req.session_id)
+                return ChatResponse(reply=_varied('closing', locale, [
+                    "All set — closing this chat now. Start another anytime.",
+                    "Great, I’ll close this session. You can reopen or start fresh whenever."
+                ]), session_id=req.session_id)
             if any(w in lower for w in more_words):
                 # Queue external sources now, but suppress repeats for a short window
                 history_filters = st.get("last_filters") or _extract_filters_from_messages([m.model_dump() for m in req.messages])
@@ -282,9 +561,15 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
                             {"account_id": req.account_id, "chat_session_id": req.session_id, "content": "New leads found:\n" + "\n".join(bullets)},
                         )
                     st["phase"] = "external_done"
-                    return ChatResponse(reply=t('shared_new_leads', locale), session_id=req.session_id)
+                    return ChatResponse(reply=_varied('shared_new_leads', locale, [
+                        "I’ve shared some new leads above. Want me to keep going or refine the target?",
+                        "Posted a few fresh leads. Should I fetch more or tweak filters?"
+                    ]), session_id=req.session_id)
                 if duplicate or (time.time() - st.get("discover_ts", 0)) < _DISCOVERY_TTL_SECONDS:
-                    return ChatResponse(reply=t('already_fetching', locale), session_id=req.session_id)
+                    return ChatResponse(reply=_varied('already_fetching', locale, [
+                        "On it — already fetching more in the background.",
+                        "Working on it — pulling additional leads now."
+                    ]), session_id=req.session_id)
         elif kind == "external_offer":
             if any(w in lower for w in yes_words + ["search", "go ahead", "do it", "fetch", "apollo", "apollo.io"]):
                 filters = st.get("last_filters") or _extract_filters_from_messages([m.model_dump() for m in req.messages])
@@ -305,12 +590,21 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
                             {"account_id": req.account_id, "chat_session_id": req.session_id, "content": "New leads found:\n" + "\n".join(bullets)},
                         )
                     st["phase"] = "external_done"
-                    return ChatResponse(reply=t('shared_new_leads', locale), session_id=req.session_id)
+                    return ChatResponse(reply=_varied('shared_new_leads', locale, [
+                        "I’ve shared some new leads above. Want me to keep going or refine the target?",
+                        "Posted a few fresh leads. Should I fetch more or tweak filters?"
+                    ]), session_id=req.session_id)
                 if duplicate or (time.time() - st.get("discover_ts", 0)) < _DISCOVERY_TTL_SECONDS:
-                    return ChatResponse(reply="On it — already fetching from external sources.", session_id=req.session_id)
+                    return ChatResponse(reply=_varied('already_fetching', locale, [
+                        "On it — already fetching more in the background.",
+                        "Working on it — pulling additional leads now."
+                    ]), session_id=req.session_id)
             if any(w in lower for w in ["no", "adjust", "change", "refine", "different", "another"]):
                 st["step"] = "collecting"
-                return ChatResponse(reply=t('ask_industry', locale), session_id=req.session_id)
+                return ChatResponse(reply=_varied('ask_industry', locale, [
+                    "Which industries should we focus on (e.g., IT, healthcare, finance)?",
+                    "What industries should I target — IT, finance, healthcare, something else?"
+                ]), session_id=req.session_id)
         # If none matched, fall through to normal handling
     if last_user:
         filters = _extract_filters(last_user)
@@ -350,13 +644,22 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
                     now = time.time()
                     if now - st.get("db_empty_ts", 0.0) > 60:
                         st["db_empty_ts"] = now
-                        return ChatResponse(reply=t('db_empty_offer_external', locale), session_id=req.session_id)
+                        return ChatResponse(reply=_varied('db_empty_offer_external', locale, [
+                            "I didn’t find matches in your database. Want me to search external sources now?",
+                            "No clear hits in your DB yet. Should I look externally?"
+                        ]), session_id=req.session_id)
                     # If we recently asked the same thing, do not repeat; move to external fetch
                     queued, duplicate, queued_status, body = _queue_discovery_once(req.account_id, req.session_id, filters)
                     if queued and not duplicate:
                         st["discover_ts"] = now
                         st["phase"] = "external_fetching"
-                        return ChatResponse(reply=t('fetching_more', locale), session_id=req.session_id)
-                    return ChatResponse(reply=t('already_fetching', locale), session_id=req.session_id)
+                        return ChatResponse(reply=_varied('fetching_more', locale, [
+                            "Understood — I’ll fetch more from external sources now.",
+                            "Got it — pulling more leads from external providers."
+                        ]), session_id=req.session_id)
+                    return ChatResponse(reply=_varied('already_fetching', locale, [
+                        "On it — already fetching more in the background.",
+                        "Working on it — pulling additional leads now."
+                    ]), session_id=req.session_id)
             # If preview call failed, keep previous heuristic reply
     return ChatResponse(reply=reply, session_id=req.session_id)

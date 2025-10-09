@@ -24,7 +24,12 @@ module Api
           ActionCable.server.broadcast("chat_session:#{session.id}", { event: 'typing', status: 'start', actor: 'assistant' })
         rescue StandardError
         end
-        reply = llm.reply(session_id: session.id, account_id: current_account.id, user_id: current_user&.id, messages: context)
+        begin
+          reply = llm.reply(session_id: session.id, account_id: current_account.id, user_id: current_user&.id, messages: context)
+        rescue ::Ai::LlmClient::StrictError => e
+          # In strict mode, surface upstream failure and do not fabricate assistant content
+          return render json: { error: 'llm_unavailable', status: e.status }, status: :bad_gateway
+        end
         assistant_msg = session.chat_messages.create!(sender_type: 'Assistant', content: reply, sent_at: Time.current)
         # Broadcast typing stop
         begin

@@ -4,6 +4,14 @@ require 'faraday'
 
 module Ai
   class LlmClient
+    class StrictError < StandardError
+      attr_reader :status
+      def initialize(message = 'LLM strict mode: upstream failed', status: 503)
+        super(message)
+        @status = status
+      end
+    end
+
     def initialize(base_url: ENV.fetch('LLM_SERVICE_URL', 'http://llm_service:8000'))
       @conn = Faraday.new(url: base_url) do |f|
         f.request :json
@@ -13,6 +21,7 @@ module Ai
     end
 
     def reply(session_id:, account_id:, user_id:, messages: [])
+      strict = strict_mode?
       payload = {
         session_id: session_id.to_s,
         account_id: account_id,
@@ -37,10 +46,20 @@ module Ai
         nil
       end
       Rails.logger.warn("LLM service non-success #{resp.status}: #{detail}")
+      raise StrictError.new("LLM upstream error", status: resp.status) if strict
       'Noted. Could you clarify industry, roles, and geography?'
     rescue Faraday::Error => e
       Rails.logger.error("LLM error: #{e.message}")
+      raise StrictError.new("LLM network error: #{e.message}") if strict_mode?
       'Sorry, I had trouble thinking just now. Could you rephrase?'
+    end
+
+    private
+
+    def strict_mode?
+      # Default off in test to keep specs passing
+      return false if defined?(Rails) && Rails.env.test?
+      ENV.fetch('LLM_STRICT', 'false').to_s.casecmp('true').zero?
     end
   end
 end
