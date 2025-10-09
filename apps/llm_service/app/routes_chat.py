@@ -657,11 +657,8 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
     else:
         context = [{"role": "system", "content": system_prompt(locale)}] + [m.model_dump() for m in req.messages]
         reply = _generate_reply(context, locale)
-    # If AI tools produced the reply, return immediately to avoid duplicate heuristics.
-    if llm is not None or LLM_STRICT:
-        return ChatResponse(reply=reply, session_id=req.session_id)
-
-    # Legacy heuristic path (kept for environments without AI tools).
+    # Optional auto-actions (preview/discover) even in strict mode when enabled.
+    # Then fall back to legacy heuristics for environments without AI tools.
     st = _get_state(req.session_id)
     last_user = next((m.content for m in req.messages[::-1] if m.role == 'user'), "")
     if last_user and st.get("step") == "await_confirmation":
