@@ -33,8 +33,12 @@ def system_prompt(locale: str) -> str:
     # Encourage the model to finish with a natural-language message every turn
     base = t('system_prompt', locale)
     suffix = (
-        " Always decide if a tool is needed. After using tools, ALWAYS end with a concise assistant message "
-        "summarizing what you did and the next suggestion. Do not leave the reply empty."
+        " You have tools: db_preview_leads, discover_leads, chat_notify, profile_update, close_chat. "
+        "If the user provides any targeting details (role, location, keywords) or asks to search, DO NOT ask for confirmation — "
+        "first call db_preview_leads(limit=5). If preview total is 0 or the user requests more, call discover_leads. "
+        "After using tools, ALWAYS call chat_notify with 3–5 bullet points and then end with a concise assistant message "
+        "summarizing what you did and suggesting whether to fetch more or refine. Only ask clarifying questions when you truly "
+        "lack enough information to begin. Do not leave the reply empty."
     )
     return f"{base} {suffix}"
 
