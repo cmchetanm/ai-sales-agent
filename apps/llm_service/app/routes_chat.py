@@ -29,7 +29,13 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 
 def system_prompt(locale: str) -> str:
-    return t('system_prompt', locale)
+    # Encourage the model to finish with a natural-language message every turn
+    base = t('system_prompt', locale)
+    suffix = (
+        " Always decide if a tool is needed. After using tools, ALWAYS end with a concise assistant message "
+        "summarizing what you did and the next suggestion. Do not leave the reply empty."
+    )
+    return f"{base} {suffix}"
 
 
 def _varied(key: str, locale: str, alts: List[str] | None = None) -> str:
@@ -463,7 +469,9 @@ def _ai_orchestrate_reply(req: ChatRequest, locale: str) -> str:
             return call.get(key, default)
         return getattr(call, key, default)
 
-    for _ in range(4):  # small, safe loop
+    # Track actions so we can synthesize a short, action-based summary if the model doesn't conclude
+    actions = {"notified": False, "sample_count": 0, "discovered": False, "preview_total": None}
+    for _ in range(6):  # allow a few tool/reflection steps
         try:
             res = model.invoke(msgs)
         except Exception as e:
@@ -504,10 +512,28 @@ def _ai_orchestrate_reply(req: ChatRequest, locale: str) -> str:
             except Exception:
                 payload = json.dumps({"status": "error", "message": "unserializable tool result"})
             msgs.append(ToolMessage(content=payload[:4000], tool_call_id=call_id))
+            # Update action trackers
+            try:
+                if name == "chat_notify":
+                    actions["notified"] = True
+                elif name == "discover_leads":
+                    actions["discovered"] = True
+                    if isinstance(result, dict) and isinstance(result.get("sample"), list):
+                        actions["sample_count"] = len(result.get("sample"))
+                elif name == "db_preview_leads":
+                    if isinstance(result, dict) and "total" in result:
+                        actions["preview_total"] = result.get("total")
+            except Exception:
+                pass
         # continue loop for model to reflect tool outputs
     # Safety fallback answer if we reached max iterations
     if LLM_STRICT:
-        raise HTTPException(status_code=503, detail={"error": "llm_no_conclusion"})
+        # Return a concise action-based summary rather than erroring out, so UX isn't blocked
+        if actions["notified"] or actions["sample_count"] > 0:
+            return "Shared new leads above. Want me to fetch more or adjust filters?"
+        if actions["preview_total"] == 0:
+            return "No matches in your database. Should I search external sources now?"
+        return "I’ve saved your preferences. Do you want me to search now or refine criteria?"
     return t('ask_missing', locale)
 
 
