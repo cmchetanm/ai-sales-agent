@@ -206,9 +206,9 @@ module Integrations
     def sample_results(filters)
       seed = (filters[:keywords].to_s + filters[:role].to_s).hash % 1000
       [
-        { first_name: 'Ava', last_name: 'Lee',  email: "ava.#{seed}@example.com", company: 'Example Co' },
-        { first_name: 'Ben', last_name: 'Kim',  email: "ben.#{seed}@example.com", company: 'Sample LLC' },
-        { first_name: 'Cara', last_name: 'Diaz', email: "cara.#{seed}@example.com", company: 'Acme Inc' }
+        { first_name: 'Ava', last_name: 'Lee',  email: "ava.#{seed}@example.com", company: 'Example Co', source: 'apollo', external_id: "apollo:#{seed}-1" },
+        { first_name: 'Ben', last_name: 'Kim',  email: "ben.#{seed}@example.com", company: 'Sample LLC', source: 'apollo', external_id: "apollo:#{seed}-2" },
+        { first_name: 'Cara', last_name: 'Diaz', email: "cara.#{seed}@example.com", company: 'Acme Inc', source: 'apollo', external_id: "apollo:#{seed}-3" }
       ]
     end
 
