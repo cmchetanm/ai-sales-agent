@@ -18,8 +18,18 @@ module Api
       def apollo_fetch
         account = Account.find(params.require(:account_id))
         filters = params.require(:filters).permit(:keywords, :role, :location).to_h.symbolize_keys
-        ApolloFetchJob.perform_later(account_id: account.id, filters:)
-        render json: { status: 'queued' }, status: :accepted
+        sync = ActiveModel::Type::Boolean.new.cast(params[:sync]) ||
+               (Rails.env.development? && ActiveModel::Type::Boolean.new.cast(ENV.fetch('INTERNAL_SYNC_JOBS', 'false')))
+        if sync
+          before_time = Time.current
+          ApolloFetchJob.perform_now(account_id: account.id, filters:)
+          created_scope = account.leads.where('created_at >= ?', before_time).where(source: 'apollo')
+          sample = created_scope.limit(10).map { |l| { first_name: l.first_name, last_name: l.last_name, email: l.email, company: l.company } }
+          render json: { status: 'ok', mode: 'sync', created: created_scope.count, sample: sample }, status: :ok
+        else
+          ApolloFetchJob.perform_later(account_id: account.id, filters:)
+          render json: { status: 'queued' }, status: :accepted
+        end
       end
 
       def discover_leads
