@@ -62,20 +62,36 @@ class LeadDiscoveryJob < ApplicationJob
   end
 
   def persist_leads(account, results)
-    results.uniq { |r| r[:email].to_s.downcase }.each do |attrs|
-      next unless attrs[:email].present?
-      account.leads.find_or_create_by!(email: attrs[:email]) do |l|
-        l.pipeline = account.pipelines.first || account.pipelines.create!(name: 'Default', status: 'active')
-        l.first_name = attrs[:first_name]
-        l.last_name  = attrs[:last_name]
-        l.company    = attrs[:company]
-        l.job_title  = attrs[:job_title]
-        l.linkedin_url = attrs[:linkedin_url]
-        l.status     = 'new'
-        l.source     = attrs[:source].presence || 'aggregator'
-        l.enrichment = (l.enrichment || {}).merge(attrs[:enrichment].to_h)
-        l.attribution = { vendor: l.source, fetched_at: Time.current.iso8601 }
+    require 'set'
+    seen = Set.new
+    Array(results).each do |attrs|
+      email = attrs[:email].to_s.downcase.presence
+      source = attrs[:source].to_s.presence
+      external_id = attrs[:external_id].to_s.presence
+      dedup_key = email || (source && external_id && "#{source}:#{external_id}")
+      next unless dedup_key
+      next if seen.include?(dedup_key)
+      seen.add(dedup_key)
+
+      lead = if email
+               account.leads.find_or_initialize_by(email: email)
+             else
+               account.leads.find_or_initialize_by(external_id: external_id, source: source)
+             end
+
+      if lead.new_record?
+        lead.pipeline = account.pipelines.first || account.pipelines.create!(name: 'Default', status: 'active')
+        lead.status = 'new'
       end
+      lead.first_name = attrs[:first_name] if attrs.key?(:first_name)
+      lead.last_name  = attrs[:last_name]  if attrs.key?(:last_name)
+      lead.company    = attrs[:company]    if attrs.key?(:company)
+      lead.job_title  = attrs[:job_title]  if attrs.key?(:job_title)
+      lead.linkedin_url = attrs[:linkedin_url] if attrs.key?(:linkedin_url)
+      lead.source     = source if source.present?
+      lead.enrichment = (lead.enrichment || {}).merge(attrs[:enrichment].to_h)
+      lead.attribution = { vendor: (lead.source.presence || 'aggregator'), fetched_at: Time.current.iso8601 }
+      lead.save!
     end
   end
 end
