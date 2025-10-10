@@ -12,8 +12,9 @@ import random
 
 USE_OPENAI = bool(os.getenv("OPENAI_API_KEY"))
 LLM_STRICT = (os.getenv("LLM_STRICT", "").lower() == "true")
+LLM_PURE = (os.getenv("LLM_PURE", "").lower() == "true")
 LLM_AUTONOTIFY = (os.getenv("LLM_AUTONOTIFY", "true").lower() == "true")
-LLM_AUTOSTART = (os.getenv("LLM_AUTOSTART", "true").lower() == "true")
+LLM_AUTOSTART = (os.getenv("LLM_AUTOSTART", "true").lower() == "true") and not (os.getenv("LLM_PURE", "").lower() == "true")
 llm = None
 if USE_OPENAI:
     try:
@@ -38,7 +39,7 @@ def system_prompt(locale: str) -> str:
         " You have tools: db_preview_leads, discover_leads, chat_notify, profile_update, close_chat. "
         "If the user provides any targeting details (role, location, keywords) or asks to search, DO NOT ask for confirmation — "
         "first call db_preview_leads(limit=5). If preview total is 0 or the user requests more, call discover_leads. "
-        "After using tools, ALWAYS call chat_notify with 3–5 bullet points and then end with a concise assistant message "
+        "After using tools, ALWAYS call chat_notify with 3–5 bullet points (name — company — email) and then end with a concise assistant message "
         "summarizing what you did and suggesting whether to fetch more or refine. Only ask clarifying questions when you truly "
         "lack enough information to begin. Do not leave the reply empty."
     )
@@ -652,13 +653,16 @@ def _ai_orchestrate_reply(req: ChatRequest, locale: str) -> str:
 async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
     locale = normalize_locale(request.headers.get('accept-language'))
     # Prefer AI-orchestrated flow (strict mode may error if LLM unavailable)
-    if llm is not None or LLM_STRICT:
+    if llm is not None or LLM_STRICT or LLM_PURE:
         reply = _ai_orchestrate_reply(req, locale)
     else:
         context = [{"role": "system", "content": system_prompt(locale)}] + [m.model_dump() for m in req.messages]
         reply = _generate_reply(context, locale)
-    # Optional auto-actions (preview/discover) even in strict mode when enabled.
-    # Then fall back to legacy heuristics for environments without AI tools.
+    # In pure/strict AI mode, return immediately — no heuristics.
+    if llm is not None or LLM_STRICT or LLM_PURE:
+        return ChatResponse(reply=reply, session_id=req.session_id)
+
+    # Legacy heuristic path (non-AI environments only)
     st = _get_state(req.session_id)
     last_user = next((m.content for m in req.messages[::-1] if m.role == 'user'), "")
     if last_user and st.get("step") == "await_confirmation":
