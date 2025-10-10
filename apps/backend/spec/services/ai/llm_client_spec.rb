@@ -16,11 +16,11 @@ RSpec.describe Ai::LlmClient do
     expect(out).to eq('Hello')
   end
 
-  it 'handles Faraday errors gracefully' do
+  it 'raises StrictError on network errors (AI-only mode)' do
     stub_request(:post, %r{llm_service:8000/chat/messages}).to_timeout
 
-    out = client.reply(session_id: 'x', account_id: 1, user_id: 1, messages: [])
-    expect(out).to be_a(String)
+    expect {
+      client.reply(session_id: 'x', account_id: 1, user_id: 1, messages: [])
+    }.to raise_error(Ai::LlmClient::StrictError)
   end
 end
-
