@@ -46,6 +46,8 @@ class Campaign < ApplicationRecord
       scope = scope.where('LOWER(email) LIKE :q OR LOWER(company) LIKE :q OR LOWER(first_name) LIKE :q OR LOWER(last_name) LIKE :q', q:)
     end
     scope = scope.where(do_not_contact: false)
+    # Exclude locked emails by default per product decision
+    scope = scope.where(locked: false)
     scope = scope.where.not(email: [nil, ''])
     scope
   end

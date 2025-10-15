@@ -10,6 +10,8 @@ class Account < ApplicationRecord
   has_many :leads, dependent: :destroy
   has_many :campaigns, dependent: :destroy
   has_many :email_templates, dependent: :destroy
+  has_many :lead_packs, dependent: :destroy
+  has_many :segments, dependent: :destroy
   has_many :email_messages, dependent: :destroy
   has_many :follow_ups, dependent: :destroy
   has_many :chat_sessions, dependent: :destroy
