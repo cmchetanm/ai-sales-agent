@@ -16,7 +16,7 @@ class LeadDiscoveryJob < ApplicationJob
         Integrations::LinkedinClient.new,
         Integrations::HubspotClient.new,
         Integrations::SalesforceClient.new
-      ]
+      ].select { |c| c.respond_to?(:ready?) ? c.ready? : true }
       vendors.each do |client|
         begin
           vendor_results = client.search_people(filters)

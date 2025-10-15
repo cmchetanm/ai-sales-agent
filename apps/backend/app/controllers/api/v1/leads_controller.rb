@@ -172,6 +172,9 @@ module Api
         scope = scope.where(assigned_user_id: params[:assigned_user_id]) if params[:assigned_user_id].present?
         scope = scope.where(do_not_contact: ActiveModel::Type::Boolean.new.cast(params[:do_not_contact])) if params.key?(:do_not_contact)
         scope = scope.where(source: params[:source]) if params[:source].present?
+        if params.key?(:locked)
+          scope = scope.where(locked: ActiveModel::Type::Boolean.new.cast(params[:locked]))
+        end
         scope = scope.where('company ILIKE ?', "%#{params[:company].to_s.strip}%") if params[:company].present?
         if params[:updated_after].present?
           if (t = safe_time(params[:updated_after]))

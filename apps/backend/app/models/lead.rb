@@ -15,6 +15,7 @@ class Lead < ApplicationRecord
   validates :status, inclusion: { in: STATUSES }
   validates :email, allow_blank: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :email, uniqueness: { scope: :account_id, case_sensitive: false }, allow_blank: true
+  validates :external_id, uniqueness: { scope: [:account_id, :source] }, allow_nil: true, if: -> { external_id.present? && source.present? }
   validate :assigned_user_must_belong_to_account
 
   before_validation :normalize_fields
@@ -30,6 +31,7 @@ class Lead < ApplicationRecord
     self.first_name = first_name.to_s.strip.presence
     self.last_name = last_name.to_s.strip.presence
     self.company = company.to_s.strip.presence
+    self.location = location.to_s.strip.presence
   end
 
   def enqueue_score

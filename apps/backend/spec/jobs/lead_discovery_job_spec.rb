@@ -6,10 +6,12 @@ RSpec.describe LeadDiscoveryJob, type: :job do
   let(:account) { create(:account) }
 
   it 'persists aggregated leads with dedupe' do
+    allow_any_instance_of(Integrations::ApolloClient).to receive(:ready?).and_return(true)
     allow_any_instance_of(Integrations::ApolloClient).to receive(:search_people).and_return([
       { first_name: 'Ava', last_name: 'Lee', email: 'ava@x.com', company: 'X' },
       { first_name: 'Ben', last_name: 'Kim', email: 'ben@x.com', company: 'X' }
     ])
+    allow_any_instance_of(Integrations::LinkedinClient).to receive(:ready?).and_return(true)
     allow_any_instance_of(Integrations::LinkedinClient).to receive(:search_people).and_return([
       { first_name: 'Ava', last_name: 'Lee', email: 'ava@x.com', company: 'X' }
     ])
@@ -18,4 +20,3 @@ RSpec.describe LeadDiscoveryJob, type: :job do
     expect(account.leads.where(email: 'ben@x.com')).to exist
   end
 end
-
