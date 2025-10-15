@@ -15,6 +15,14 @@ RSpec.describe 'API V1 Campaign actions', type: :request do
     expect(json_body['target_count']).to be >= 1
   end
 
+  it 'excludes locked leads by default' do
+    create(:lead, account: account, pipeline: pipeline, email: 'locked@example.com', locked: true)
+    get "/api/v1/campaigns/#{campaign.id}/preview", headers: auth_headers(user)
+    expect(response).to have_http_status(:ok)
+    # Only the unlocked lead from let!(:lead) should be counted
+    expect(json_body['target_count']).to eq(1)
+  end
+
   it 'starts a campaign and enqueues run job' do
     ActiveJob::Base.queue_adapter = :test
     post "/api/v1/campaigns/#{campaign.id}/start", headers: auth_headers(user)
@@ -31,4 +39,3 @@ RSpec.describe 'API V1 Campaign actions', type: :request do
     expect(json_body['campaign']['status']).to eq('paused')
   end
 end
-

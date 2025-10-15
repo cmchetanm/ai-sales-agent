@@ -17,15 +17,22 @@ module Api
 
       def apollo_fetch
         account = Account.find(params.require(:account_id))
-        filters = params.require(:filters).permit(:keywords, :role, :location).to_h.symbolize_keys
+        filters = params.require(:filters).permit(:keywords, :role, :location, :limit).to_h.symbolize_keys
         sync = ActiveModel::Type::Boolean.new.cast(params[:sync]) ||
                (Rails.env.development? && ActiveModel::Type::Boolean.new.cast(ENV.fetch('INTERNAL_SYNC_JOBS', 'false')))
         if sync
           before_time = Time.current
           ApolloFetchJob.perform_now(account_id: account.id, filters:)
           created_scope = account.leads.where('created_at >= ?', before_time).where(source: 'apollo')
-          sample = created_scope.limit(10).map { |l| { first_name: l.first_name, last_name: l.last_name, email: l.email, company: l.company } }
-          render json: { status: 'ok', mode: 'sync', created: created_scope.count, sample: sample }, status: :ok
+          created_count = created_scope.count
+          rows = created_scope
+          # Fallback: if nothing new was created (e.g., updates only), return recent apollo leads so the caller can show something real
+          if created_count.zero?
+            rows = account.leads.where(source: 'apollo').order(updated_at: :desc)
+          end
+          rows = rows.order(Arel.sql('COALESCE(score, 0) DESC')).limit((filters[:limit] || 10).to_i)
+          sample = rows.map { |l| { id: l.id, first_name: l.first_name, last_name: l.last_name, email: l.email, company: l.company, job_title: l.job_title } }
+          render json: { status: 'ok', mode: 'sync', created: created_count, sample: sample }, status: :ok
         else
           ApolloFetchJob.perform_later(account_id: account.id, filters:)
           render json: { status: 'queued' }, status: :accepted
@@ -57,6 +64,38 @@ module Api
         content = params.require(:content)
         msg = session.chat_messages.create!(sender_type: 'Assistant', content: content.to_s, sent_at: Time.current)
         render json: { status: 'ok', message_id: msg.id }
+      end
+
+      # GET /api/v1/internal/lead_packs/:id/export
+      def export_lead_pack
+        account = Account.find(params.require(:account_id))
+        pack = account.lead_packs.find(params.require(:id))
+        leads = account.leads.where(id: pack.lead_ids)
+        if ActiveModel::Type::Boolean.new.cast(params[:unlocked_only])
+          leads = leads.where(locked: false).where.not(email: [nil, ''])
+        end
+        csv = CSV.generate(headers: true) do |out|
+          out << %w[email first_name last_name company job_title location phone linkedin_url website source locked score verification_status]
+          leads.find_each do |l|
+            out << [l.email, l.first_name, l.last_name, l.company, l.job_title, l.location, l.phone, l.linkedin_url, l.website, l.source, l.locked, l.score, l.verification_status]
+          end
+        end
+        send_data csv, filename: "lead-pack-#{pack.id}.csv", type: 'text/csv; charset=utf-8'
+      end
+
+      # POST /api/v1/internal/lead_packs/:id/bulk_update
+      # { account_id, lead: { assigned_user_id?, do_not_contact? } }
+      def bulk_update_lead_pack
+        account = Account.find(params.require(:account_id))
+        pack = account.lead_packs.find(params.require(:id))
+        attrs = params.require(:lead).permit(:assigned_user_id, :do_not_contact).to_h.symbolize_keys
+        leads = account.leads.where(id: pack.lead_ids)
+        updated = 0
+        leads.find_each do |l|
+          l.assign_attributes(attrs)
+          updated += 1 if l.save
+        end
+        render json: { status: 'ok', updated: updated }
       end
 
       # Synchronous DB preview search (no external vendors)
@@ -152,6 +191,27 @@ module Api
           { first_name: l.first_name, last_name: l.last_name, email: l.email, company: l.company }
         end
         [rows, total]
+      end
+
+      public
+
+      # POST /api/v1/internal/lead_packs
+      # { account_id, name?, lead_ids?: [], filters?: {} }
+      def create_lead_pack
+        account = Account.find(params.require(:account_id))
+        name = params[:name].presence || "Pack #{Time.current.strftime('%Y%m%d-%H%M')}"
+        lead_ids = Array(params[:lead_ids]).map(&:to_i).uniq
+        filters = params[:filters].is_a?(ActionController::Parameters) ? params[:filters].permit!.to_h : (params[:filters] || {})
+        if lead_ids.empty?
+          # fallback to filters to resolve IDs
+          scope = account.leads
+          scope = scope.where(source: filters['source']) if filters['source']
+          scope = scope.where('LOWER(job_title) LIKE ?', "%#{filters['role'].to_s.downcase}%") if filters['role']
+          scope = scope.where('LOWER(company) LIKE ?', "%#{filters['company'].to_s.downcase}%") if filters['company']
+          lead_ids = scope.limit(100).pluck(:id)
+        end
+        pack = account.lead_packs.create!(name: name, lead_ids: lead_ids, filters: filters)
+        render json: { status: 'ok', lead_pack: { id: pack.id, name: pack.name, size: pack.lead_ids.size } }, status: :ok
       end
       end
     end

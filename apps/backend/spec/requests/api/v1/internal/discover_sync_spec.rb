@@ -13,6 +13,14 @@ RSpec.describe 'API V1 Internal Discover (sync)', type: :request do
   end
 
   it 'runs discovery synchronously and returns created + sample' do
+    # Stub the job to create some rows synchronously
+    allow(LeadDiscoveryJob).to receive(:perform_now) do |account_id:, filters:|
+      account = Account.find(account_id)
+      pipe = account.pipelines.first || account.pipelines.create!(name: 'Default', status: 'active')
+      %w[a b].each_with_index do |name, i|
+        account.leads.create!(pipeline: pipe, email: "#{name}@discover.test", first_name: name.upcase, company: 'Acme')
+      end
+    end
     post '/api/v1/internal/discover_leads', headers: { 'X-Internal-Token' => token }, params: { account_id: account.id, filters: { role: 'cto', keywords: 'saas' }, sync: true }
     expect(response).to have_http_status(:ok)
     body = JSON.parse(response.body)
