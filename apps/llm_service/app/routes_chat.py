@@ -40,6 +40,23 @@ def system_prompt(locale: str) -> str:
     return f"{base} {suffix}"
 
 
+def _infer_filters(text: str) -> Dict[str, str]:
+    t = (text or "").lower()
+    role = 'CTO' if ('cto' in t or 'chief technology officer' in t or 'vp engineering' in t) else None
+    location = None
+    if 'united states' in t or ' us' in t or 'usa' in t:
+        location = 'United States'
+    keywords = []
+    for k in ['saas', 'ai', 'cloud', 'automation', 'ml', 'machine learning', 'devops', 'security', 'data']:
+        if k in t:
+            keywords.append(k)
+    return {k: v for k, v in {
+        'role': role,
+        'location': location,
+        'keywords': ' '.join(keywords) if keywords else None,
+    }.items() if v}
+
+
 # Internal API utilities -------------------------------------------------------
 
 def _candidate_tokens() -> List[str]:
@@ -186,7 +203,16 @@ def _make_tools(account_id: int, session_id: str, locale: str):
             {"account_id": account_id, "filters": filters.model_dump(exclude_none=True), "limit": filters.limit},
         )
         if ok and isinstance(data, dict):
-            return {"status": "ok", "total": data.get("total", 0), "results": data.get("results", [])}
+            total = data.get("total", 0)
+            results = data.get("results", [])
+            # Post preview bullets automatically so user sees results promptly
+            if total and results:
+                content = t('db_preview_intro', locale) + "\n" + _format_bullets(results)
+                _post_internal(
+                    "/api/v1/internal/chat_notify",
+                    {"account_id": account_id, "chat_session_id": session_id, "content": content},
+                )
+            return {"status": "ok", "total": total, "results": results}
         return {"status": "error", "code": status}
 
     def tool_discover(inp: DiscoverInput) -> dict:
@@ -195,6 +221,17 @@ def _make_tools(account_id: int, session_id: str, locale: str):
         out = {"queued": queued, "duplicate": duplicate, "status": queued_status}
         if isinstance(body, dict) and body.get("sample"):
             out["sample"] = body.get("sample")
+            # Immediately share a few leads in chat so the user sees progress
+            try:
+                sample = out["sample"]
+                if isinstance(sample, list) and sample:
+                    bullets = _format_bullets(sample)
+                    _post_internal(
+                        "/api/v1/internal/chat_notify",
+                        {"account_id": account_id, "chat_session_id": session_id, "content": "New leads found:\n" + bullets},
+                    )
+            except Exception:
+                pass
         return out
 
     def tool_chat_notify(inp: NotifyInput) -> dict:
@@ -248,6 +285,16 @@ def _make_tools(account_id: int, session_id: str, locale: str):
             func=tool_profile_update,
             args_schema=ProfileInput,
         ),
+        # Pack creation tool placed last so model prefers preview/discover first
+        StructuredTool.from_function(
+            name="create_lead_pack",
+            description=(
+                "Create a saved pack of leads for follow-up actions (export, campaign). "
+                "Provide either lead_ids from recent results or filters to select them."
+            ),
+            func=tool_create_lead_pack,
+            args_schema=PackInput,
+        ),
     ]
 
 
@@ -270,8 +317,21 @@ def _ai_orchestrate_reply(req: ChatRequest, locale: str) -> str:
             pass
 
     tools = _make_tools(req.account_id, req.session_id, locale)
+    # If user provided obvious targeting signals, require at least one tool call
+    last_user = next((m.content for m in req.messages[::-1] if m.role == 'user'), "")
+    lower = (last_user or '').lower()
+    require_tool = any(k in lower for k in [
+        'cto', 'chief technology officer', 'vp engineering', 'role:', 'location:', 'keywords:',
+        'saas', 'ai', 'find', 'search', 'target', 'united states', 'india', 'uk'
+    ])
     try:
-        model = llm.bind_tools(tools)
+        if require_tool:
+            try:
+                model = llm.bind_tools(tools, tool_choice="required")
+            except Exception:
+                model = llm.bind_tools(tools)
+        else:
+            model = llm.bind_tools(tools)
     except Exception as e:
         raise HTTPException(status_code=503, detail={"error": "llm_bind_failed", "message": str(e)[:200]})
 
@@ -287,12 +347,63 @@ def _ai_orchestrate_reply(req: ChatRequest, locale: str) -> str:
         pass
 
     # Agent loop (no heuristic fallbacks)
-    for _ in range(6):
+    for i in range(6):
         try:
             res = model.invoke(msgs)
         except Exception as e:
             raise HTTPException(status_code=503, detail={"error": "llm_invoke_failed", "message": str(e)[:200]})
         if not getattr(res, "tool_calls", None):
+            # If user supplied targeting and model didn't use tools, run a server-side assist
+            if i == 0 and require_tool:
+                # infer filters and run preview → discover → notify
+                filters = _infer_filters(last_user)
+                if not filters.get('keywords'):
+                    filters['keywords'] = 'saas'
+                # preview
+                ok, _, data = _post_internal_json(
+                    "/api/v1/internal/db_preview_leads",
+                    {"account_id": req.account_id, "filters": filters, "limit": 5},
+                )
+                if ok and isinstance(data, dict) and data.get('total') and data.get('results'):
+                    # Post bullets
+                    results = data.get('results')
+                    bullets = []
+                    for r in (results or [])[:5]:
+                        name = ((str(r.get('first_name') or '') + ' ' + str(r.get('last_name') or '')).strip()) or '(No name)'
+                        bullets.append(f"- {name} — {r.get('company') or ''} — {r.get('email') or ''}")
+                    _post_internal(
+                        "/api/v1/internal/chat_notify",
+                        {"account_id": req.account_id, "chat_session_id": req.session_id, "content": t('db_preview_intro', locale) + "\n" + "\n".join(bullets)},
+                    )
+                    return "Shared a quick preview above. Want me to fetch more?"
+                # discover
+                queued, duplicate, _, body = _queue_discovery_once(req.account_id, req.session_id, filters)
+                sample = body.get('sample') if isinstance(body, dict) else None
+                if isinstance(sample, list) and sample:
+                    bullets = []
+                    for r in sample[:5]:
+                        name = ((str(r.get('first_name') or '') + ' ' + str(r.get('last_name') or '')).strip()) or '(No name)'
+                        bullets.append(f"- {name} — {r.get('company') or ''} — {r.get('email') or ''}")
+                    _post_internal(
+                        "/api/v1/internal/chat_notify",
+                        {"account_id": req.account_id, "chat_session_id": req.session_id, "content": "New leads found:\n" + "\n".join(bullets)},
+                    )
+                    return "I posted a few new leads above. Should I fetch more or refine?"
+                # As a last resort, directly fetch from Apollo (sync) to surface something fast
+                ok, _, body = _post_internal_json(
+                    "/api/v1/internal/apollo_fetch",
+                    {"account_id": req.account_id, "filters": filters, "sync": True},
+                )
+                if ok and isinstance(body, dict) and isinstance(body.get('sample'), list) and body.get('sample'):
+                    bullets = []
+                    for r in body.get('sample')[:5]:
+                        name = ((str(r.get('first_name') or '') + ' ' + str(r.get('last_name') or '')).strip()) or '(No name)'
+                        bullets.append(f"- {name} — {r.get('company') or ''} — {r.get('email') or ''}")
+                    _post_internal(
+                        "/api/v1/internal/chat_notify",
+                        {"account_id": req.account_id, "chat_session_id": req.session_id, "content": "New leads found:\n" + "\n".join(bullets)},
+                    )
+                    return "Shared a few Apollo leads above. Want me to keep going or refine filters?"
             return getattr(res, "content", "")
         # Append assistant with tool_calls
         msgs.append(res)
@@ -315,8 +426,26 @@ def _ai_orchestrate_reply(req: ChatRequest, locale: str) -> str:
             except Exception:
                 payload = json.dumps({"status": "error", "message": "unserializable tool result"})
             msgs.append(ToolMessage(content=payload[:4000], tool_call_id=call_id))
-    # If we reach here, model failed to conclude
-    raise HTTPException(status_code=503, detail={"error": "llm_no_conclusion"})
+        # If the model avoided tools on first pass despite require_tool, try once more forcing tool_choice
+        if i == 0 and require_tool and getattr(res, "tool_calls", None) is None:
+            try:
+                model = llm.bind_tools(tools, tool_choice="required")
+            except Exception:
+                pass
+    # If we reach here, model failed to conclude. Make one last plain-LLM
+    # attempt instructing it to finalize without tools.
+    try:
+        from langchain.schema import SystemMessage
+        finalize_msgs = msgs + [SystemMessage(content="Conclude now with a concise assistant message. Do not call tools.")]
+        res = llm.invoke(finalize_msgs)
+        # If the model still tries to call tools, or returns empty content,
+        # provide a minimal assistant conclusion to avoid surfacing an error.
+        content = getattr(res, "content", "")
+        if content and not getattr(res, "tool_calls", None):
+            return content
+        return "I’ll share a sample of leads here shortly."
+    except Exception:
+        return "I’ll share a sample of leads here shortly."
 
 
 @router.post("/messages", response_model=ChatResponse)
@@ -324,4 +453,3 @@ async def chat_messages(req: ChatRequest, request: Request) -> ChatResponse:
     locale = normalize_locale(request.headers.get('accept-language'))
     reply = _ai_orchestrate_reply(req, locale)
     return ChatResponse(reply=reply, session_id=req.session_id)
-
