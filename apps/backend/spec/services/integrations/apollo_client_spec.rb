@@ -34,4 +34,26 @@ RSpec.describe Integrations::ApolloClient do
       expect(results.first[:source]).to eq('apollo')
     end
   end
+
+  it 'marks contacts as locked when email is not unlocked' do
+    stub_request(:post, 'https://api.apollo.io/api/v1/mixed_people/search')
+      .to_return(
+        status: 200,
+        headers: { 'Content-Type' => 'application/json' },
+        body: {
+          people: [
+            {
+              'first_name' => 'Adam',
+              'last_name' => 'Whitlock',
+              'email' => 'email_not_unlocked@domain.com',
+              'organization' => { 'name' => 'Behavure AI' }
+            }
+          ]
+        }.to_json
+      )
+
+    client = described_class.new(api_key: 'test-key', enabled: true)
+    results = client.search_people(keywords: 'saas', limit: 1)
+    expect(results.first[:locked]).to be true
+  end
 end

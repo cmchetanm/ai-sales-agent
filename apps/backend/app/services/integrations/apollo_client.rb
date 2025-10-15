@@ -23,13 +23,11 @@ module Integrations
     end
 
     def search_people(filters = {})
-      # Never hit external API during tests unless explicitly allowed
+      # Never hit external API during tests unless explicitly enabled
       if defined?(Rails) && Rails.env.test?
-        # In test, only allow HTTP when the client is enabled and has an API key
-        # (e.g., explicit `enabled: true` in unit tests with WebMock stubs).
-        return sample_results(filters) unless (@enabled && @api_key.present? && @conn)
+        return [] unless (@enabled && @api_key.present? && @conn)
       end
-      return sample_results(filters) unless @enabled && @api_key.present? && @conn
+      return [] unless @enabled && @api_key.present? && @conn
 
       desired = (filters[:limit] || ENV.fetch('APOLLO_RESULT_LIMIT', 25)).to_i
       per_page = [[(ENV.fetch('APOLLO_PER_PAGE', 25)).to_i, desired].min, 100].min
@@ -52,10 +50,10 @@ module Integrations
       end
 
       return out.first(desired) if out.any?
-      sample_results(filters)
+      []
     rescue Faraday::Error => e
       Rails.logger.warn("Apollo search error: #{e.message}")
-      sample_results(filters)
+      []
     end
 
     private
@@ -195,21 +193,13 @@ module Integrations
         revenue = p.dig('organization', 'annual_revenue') || p.dig('company', 'revenue')
         industry = p.dig('organization', 'industry') || p.dig('company', 'industry')
 
+        locked = email.to_s == 'email_not_unlocked@domain.com'
         out = { first_name: first_name, last_name: last_name, email: email, company: org_name, job_title: title, linkedin_url: linkedin,
-                enrichment: { company_size:, revenue:, industry: }.compact, source: 'apollo', external_id: external_id }.compact
+                enrichment: { company_size:, revenue:, industry: }.compact, source: 'apollo', external_id: external_id, locked: locked }.compact
         out if out[:first_name] || out[:last_name] || out[:email] || out[:external_id]
       end
       return mapped if mapped.any?
-      sample_results({})
-    end
-
-    def sample_results(filters)
-      seed = (filters[:keywords].to_s + filters[:role].to_s).hash % 1000
-      [
-        { first_name: 'Ava', last_name: 'Lee',  email: "ava.#{seed}@example.com", company: 'Example Co', source: 'apollo', external_id: "apollo:#{seed}-1" },
-        { first_name: 'Ben', last_name: 'Kim',  email: "ben.#{seed}@example.com", company: 'Sample LLC', source: 'apollo', external_id: "apollo:#{seed}-2" },
-        { first_name: 'Cara', last_name: 'Diaz', email: "cara.#{seed}@example.com", company: 'Acme Inc', source: 'apollo', external_id: "apollo:#{seed}-3" }
-      ]
+      []
     end
 
     public
