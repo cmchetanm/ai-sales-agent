@@ -62,6 +62,8 @@ Rails.application.routes.draw do
           end
         end
         resources :users, only: [:index]
+        resource :dashboard, only: [:show], controller: :dashboard
+        resources :segments, only: %i[index create show destroy]
         resources :chat_sessions, only: %i[index create show] do
           resources :messages, only: %i[index create], controller: 'chat_messages'
         end
@@ -88,6 +90,9 @@ Rails.application.routes.draw do
         post 'close_chat', to: 'tools#close_chat'
         post 'chat_notify', to: 'tools#chat_notify'
         post 'email_event', to: 'tools#email_event'
+        post 'lead_packs', to: 'tools#create_lead_pack'
+        get  'lead_packs/:id/export', to: 'tools#export_lead_pack'
+        post 'lead_packs/:id/bulk_update', to: 'tools#bulk_update_lead_pack'
       end
         resource :account, only: %i[show update]
 
@@ -168,6 +173,9 @@ Rails.application.routes.draw do
         post 'close_chat', to: 'tools#close_chat'
         post 'chat_notify', to: 'tools#chat_notify'
         post 'email_event', to: 'tools#email_event'
+        post 'lead_packs', to: 'tools#create_lead_pack'
+        get  'lead_packs/:id/export', to: 'tools#export_lead_pack'
+        post 'lead_packs/:id/bulk_update', to: 'tools#bulk_update_lead_pack'
       end
       resource :account, only: %i[show update]
       namespace :auth do
