@@ -49,3 +49,7 @@ ops/env/.env.*
 .vscode/
 .idea/
 *.swp
+
+# Coverage DB files
+.coverage
+**/.coverage
