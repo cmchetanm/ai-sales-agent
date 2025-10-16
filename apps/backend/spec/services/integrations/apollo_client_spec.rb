@@ -54,6 +54,43 @@ RSpec.describe Integrations::ApolloClient do
       expect(out.first[:source]).to eq('apollo')
       expect(out.first[:external_id]).to eq('x1')
     end
+
+    it 'safe_post handles success, 429 retry and Faraday error' do
+      client = described_class.new(api_key: 'k', enabled: true)
+      conn = instance_double(Faraday::Connection)
+      client.instance_variable_set(:@conn, conn)
+      # success
+      allow(conn).to receive(:post).and_return(double(success?: true, status: 200, body: { 'ok' => true }))
+      ok = client.send(:safe_post, 'path', {})
+      expect(ok[:ok]).to eq(true)
+      # 429 then non-success
+      calls = 0
+      allow(conn).to receive(:post) do
+        calls += 1
+        if calls == 1
+          double(success?: false, status: 429, body: {})
+        else
+          double(success?: false, status: 500, body: {})
+        end
+      end
+      res = client.send(:safe_post, 'path', {})
+      expect(res[:ok]).to eq(false)
+      # Faraday error path
+      allow(conn).to receive(:post).and_raise(Faraday::ConnectionFailed.new('boom'))
+      res2 = client.send(:safe_post, 'path', {})
+      expect(res2[:ok]).to eq(false)
+    end
+
+    it 'try_endpoints_with_repairs retries removing invalid fields' do
+      client = described_class.new(api_key: 'k', enabled: true)
+      allow(client).to receive(:safe_post).and_return(
+        { ok: false, status: 422, body: { 'errors' => ['person_locations invalid'] } },
+        { ok: false, status: 422, body: { 'errors' => ['person_titles invalid'] } },
+        { ok: true, status: 200, body: { 'people' => [] } }
+      )
+      body = client.send(:try_endpoints_with_repairs, ['people/search'], { person_locations: ['X'], person_titles: ['Y'] })
+      expect(body).to be_a(Hash)
+    end
   end
 
   describe '#probe' do

@@ -26,5 +26,15 @@ RSpec.describe ApplicationPolicy do
     expect(p.update?).to eq(false)
     expect(p.destroy?).to eq(false)
   end
-end
 
+  it 'defaults allow index/show and alias new/edit' do
+    p = described_class.new(viewer, Object.new)
+    expect(p.index?).to eq(true)
+    expect(p.show?).to eq(true)
+    expect(p.new?).to eq(p.create?)
+    expect(p.edit?).to eq(p.update?)
+    # Scope.resolve returns scope
+    s = ApplicationPolicy::Scope.new(viewer, User.all)
+    expect(s.resolve).to be_a(ActiveRecord::Relation)
+  end
+end
