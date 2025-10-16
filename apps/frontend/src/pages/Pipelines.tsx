@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { StatusChip } from '../components/StatusChip';
 import { TableSkeletonRows } from '../components/TableSkeleton';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import { useLocation } from 'react-router-dom';
 
 export const Pipelines = () => {
   const { token } = useAuth();
@@ -31,6 +32,7 @@ export const Pipelines = () => {
   const [order, setOrder] = useQueryState('order', 'asc');
   const [q, setQ] = useQueryState('q', '');
   const { t } = useTranslation();
+  const location = useLocation();
 
   const load = async (targetPage = page) => {
     if (!token) return;
@@ -47,6 +49,11 @@ export const Pipelines = () => {
   };
 
   useEffect(() => { load(page || 1); }, [token]);
+
+  useEffect(() => {
+    const sp = new URLSearchParams(location.search);
+    if (sp.get('new')) setCreateOpen(true);
+  }, [location.search]);
 
   const create = async (e: FormEvent) => {
     e.preventDefault();

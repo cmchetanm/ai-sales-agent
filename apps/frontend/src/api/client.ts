@@ -118,6 +118,11 @@ export const api = {
     { method: 'PATCH', body: JSON.stringify({ lead: attrs }) },
     token
   ),
+  leadsQualify: (token: string, id: number) => request<{ status: string }>(
+    `/api/v1/leads/${id}/qualify`,
+    { method: 'POST' },
+    token
+  ),
   leadsActivitiesIndex: (token: string, leadId: number, params: Record<string, any> = {}) => request<{ activities: any[]; pagination?: any }>(
     `/api/v1/leads/${leadId}/activities${toQS(params)}`,
     {},

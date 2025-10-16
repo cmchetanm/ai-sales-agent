@@ -1,4 +1,5 @@
-import { Avatar, Box, Stack, Typography } from '@mui/material';
+import { Avatar, Box, Stack, Typography, IconButton, Tooltip } from '@mui/material';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 export type BubbleRole = 'user' | 'assistant';
 
@@ -16,7 +17,15 @@ export function ChatBubble({ role, content, timestamp }: { role: BubbleRole; con
         borderRadius: 2,
         color: '#fff',
         backgroundColor: isUser ? '#6d72f3' : '#111a2e',
+        position: 'relative',
       }}>
+        <Box sx={{ position: 'absolute', top: 2, right: 2, opacity: 0.6 }}>
+          <Tooltip title="Copy">
+            <IconButton size="small" onClick={() => navigator.clipboard?.writeText(content)}>
+              <ContentCopyIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.8)' }} />
+            </IconButton>
+          </Tooltip>
+        </Box>
         <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{content}</Typography>
         {timestamp && (
           <Typography variant="caption" color="rgba(255,255,255,0.6)" sx={{ display: 'block', mt: 0.25 }}>
@@ -27,4 +36,3 @@ export function ChatBubble({ role, content, timestamp }: { role: BubbleRole; con
     </Stack>
   );
 }
-

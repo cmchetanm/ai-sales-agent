@@ -30,6 +30,7 @@ import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
+import SearchIcon from '@mui/icons-material/Search';
 import { useAuth } from '../auth/AuthContext';
 import { ColorModeContext } from '../theme';
 import { useTranslation } from 'react-i18next';
@@ -39,11 +40,19 @@ import { useLocation, useParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { Aurora } from './Aurora';
 import { TopBarProgress } from './TopBarProgress';
+import { CommandPalette } from './CommandPalette';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import Breadcrumbs from '@mui/material/Breadcrumbs';
+import Link from '@mui/material/Link';
+import { Link as RouterLink } from 'react-router-dom';
+import { ShortcutsDialog } from './ShortcutsDialog';
 
 const drawerWidth = 260;
 
 export function LayoutMui() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const { account, user, signOut, token } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -55,6 +64,19 @@ export function LayoutMui() {
   const [lang, setLang] = useState(currentLang);
   const compact = useMediaQuery(theme.breakpoints.down('sm'));
   const [langAnchor, setLangAnchor] = useState<null | HTMLElement>(null);
+
+  // Global keyboard shortcut: Ctrl/Cmd+K opens command palette
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setPaletteOpen((s) => !s);
+      }
+      if (e.key === 'Escape') setPaletteOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
   const logout = async () => { await signOut(); navigate(`/${lang}/login`); };
@@ -145,6 +167,16 @@ export function LayoutMui() {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {account?.name || t('app.workspace')}
           </Typography>
+          <Tooltip title="Command Palette (Ctrl/Cmd+K)">
+            <IconButton color="inherit" onClick={() => setPaletteOpen(true)} sx={{ mr: 1 }}>
+              <SearchIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Keyboard Shortcuts">
+            <IconButton color="inherit" onClick={() => setHelpOpen(true)} sx={{ mr: 1 }}>
+              <HelpOutlineIcon />
+            </IconButton>
+          </Tooltip>
           <IconButton color="inherit" onClick={colorMode.toggle} sx={{ mr: 1 }} title={t('app.toggle_theme')}>
             {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
           </IconButton>
@@ -171,9 +203,12 @@ export function LayoutMui() {
       <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, sm: 3 }, width: { sm: `calc(100% - ${drawerWidth}px)` }, position: 'relative', overflow: 'hidden' }}>
         <TopBarProgress />
         <Toolbar />
+        <Crumbs />
         <Aurora />
         <Outlet />
       </Box>
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <ShortcutsDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
     </Box>
   );
 }
@@ -194,5 +229,35 @@ function NavItem({ to, icon, label, baseLang, compact }: { to: string; icon: Rea
         )}
       </NavLink>
     </ListItem>
+  );
+}
+
+function Crumbs() {
+  const location = useLocation();
+  const { t } = useTranslation();
+  const parts = location.pathname.split('/').filter(Boolean);
+  const lang = parts[0];
+  const segments = parts.slice(1);
+  const label = (seg: string) => ({
+    '': t('nav.dashboard'),
+    pipelines: t('nav.pipelines'),
+    leads: t('nav.leads'),
+    campaigns: t('nav.campaigns'),
+    chat: t('nav.chat'),
+    account: t('nav.account'),
+  } as any)[seg] || seg;
+  const hrefAt = (idx: number) => `/${[lang, ...segments.slice(0, idx + 1)].filter(Boolean).join('/')}`;
+  if (segments.length === 0) return null;
+  return (
+    <Breadcrumbs sx={{ mb: 1 }} aria-label="breadcrumbs">
+      <Link component={RouterLink} to={`/${lang}/`} color="inherit">{t('nav.dashboard')}</Link>
+      {segments.map((seg, i) => (
+        i === segments.length - 1 ? (
+          <Typography key={i} color="text.primary" variant="body2">{label(seg)}</Typography>
+        ) : (
+          <Link key={i} component={RouterLink} to={hrefAt(i)} color="inherit">{label(seg)}</Link>
+        )
+      ))}
+    </Breadcrumbs>
   );
 }

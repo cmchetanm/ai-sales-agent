@@ -15,6 +15,7 @@ import { StatusChip } from '../components/StatusChip';
 import { StatusSelectChip } from '../components/StatusSelectChip';
 import { TableSkeletonRows } from '../components/TableSkeleton';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import { useLocation } from 'react-router-dom';
 
 export const Campaigns = () => {
   const { token } = useAuth();
@@ -45,6 +46,7 @@ export const Campaigns = () => {
   const [status, setStatus] = useQueryState('status', '');
   const [q, setQ] = useQueryState('q', '');
   const { t } = useTranslation();
+  const location = useLocation();
 
   const load = async (targetPage = page) => {
     if (!token) return;
@@ -64,6 +66,11 @@ export const Campaigns = () => {
   };
 
   useEffect(() => { load(page || 1); }, [token]);
+
+  useEffect(() => {
+    const sp = new URLSearchParams(location.search);
+    if (sp.get('new')) setCreateOpen(true);
+  }, [location.search]);
 
   const create = async (e: FormEvent) => {
     e.preventDefault();

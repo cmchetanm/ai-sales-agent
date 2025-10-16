@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, IconButton, Stack, TextField, Typography, LinearProgress, Chip, Box, MenuItem, Select, FormControl, InputLabel, Tooltip } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
+import ClearIcon from '@mui/icons-material/Clear';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
 import { useTranslation } from 'react-i18next';
@@ -272,7 +273,29 @@ export const AgentChat = () => {
         ))}
       </Box>
       <Stack direction="row" spacing={1}>
-        <TextField fullWidth size="small" placeholder={t('chat.placeholder')} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') send(); }} />
+        <TextField
+          fullWidth
+          size="small"
+          placeholder={t('chat.placeholder')}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          multiline
+          minRows={1}
+          maxRows={6}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              send();
+            }
+          }}
+        />
+        {!!input && (
+          <Tooltip title="Clear (Esc)">
+            <span>
+              <IconButton color="inherit" onClick={() => setInput('')} disabled={sending}><ClearIcon /></IconButton>
+            </span>
+          </Tooltip>
+        )}
         <IconButton color="primary" onClick={send} disabled={sending || !input.trim()}><SendIcon /></IconButton>
       </Stack>
     </Stack>

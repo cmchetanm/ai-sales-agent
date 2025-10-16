@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
-import { Button, Card, CardContent, IconButton, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel, Checkbox, Stack, Chip, Tooltip } from '@mui/material';
+import { Button, Card, CardContent, IconButton, MenuItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel, Checkbox, Stack, Chip, Tooltip, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -18,6 +18,12 @@ import { StatusSelectChip } from '../components/StatusSelectChip';
 import { SourceBadge } from '../components/SourceBadge';
 import PersonAddAltOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined';
 import CloudDownloadOutlinedIcon from '@mui/icons-material/CloudDownloadOutlined';
+import SaveIcon from '@mui/icons-material/Save';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import { useLocation } from 'react-router-dom';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import ViewDayOutlinedIcon from '@mui/icons-material/ViewDayOutlined';
+import DensitySmallIcon from '@mui/icons-material/DensitySmall';
 
 export const Leads = () => {
   const { token } = useAuth();
@@ -48,6 +54,12 @@ export const Leads = () => {
   const [discovering, setDiscovering] = useState(false);
   const polls = useRef(0);
   const timer = useRef<number | null>(null);
+  const location = useLocation();
+  const [density, setDensity] = useState<'compact'|'comfortable'>(() => (localStorage.getItem('leads_density') as any) || 'compact');
+
+  type SavedView = { name: string; pipelineId: number | ''; ownerId: number | ''; status: string; q: string; orderBy: string; order: string };
+  const [savedViews, setSavedViews] = useState<SavedView[]>([]);
+  const [selectedView, setSelectedView] = useState<string>('');
 
   const load = async (targetPage = page) => {
     if (!token) return;
@@ -70,6 +82,20 @@ export const Leads = () => {
   };
 
   useEffect(() => { load(page || 1); }, [token, pipelineId, ownerId]);
+
+  // Load saved views
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('leads_saved_views');
+      const parsed = raw ? JSON.parse(raw) as SavedView[] : [];
+      setSavedViews(parsed);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    const sp = new URLSearchParams(location.search);
+    if (sp.get('new') === 'lead') setCreateOpen(true);
+  }, [location.search]);
 
   // Quick email-create removed; use New dialog instead
 
@@ -131,6 +157,48 @@ export const Leads = () => {
             {users.map((u) => <MenuItem key={u.id} value={u.id}>{(u.first_name || u.last_name) ? `${u.first_name || ''} ${u.last_name || ''}`.trim() : u.email}</MenuItem>)}
           </TextField>
           <SearchBar value={q} onChange={setQ} placeholder={t('leads.search')} />
+          {/* Quick status chips */}
+          {['new','researching','outreach','responded','won','lost'].map((s) => (
+            <Chip key={s} size="small" label={s} color={status===s ? 'primary' : 'default'} onClick={() => setStatus(s)} />
+          ))}
+          {/* Density toggle */}
+          <ToggleButtonGroup exclusive size="small" value={density} onChange={(_,v) => { if(v){ setDensity(v); try{ localStorage.setItem('leads_density', v);}catch{} } }}>
+            <ToggleButton value="compact" aria-label="compact"><DensitySmallIcon fontSize="small" />&nbsp;Compact</ToggleButton>
+            <ToggleButton value="comfortable" aria-label="comfortable"><ViewDayOutlinedIcon fontSize="small" />&nbsp;Comfort</ToggleButton>
+          </ToggleButtonGroup>
+          {/* Saved views */}
+          <TextField select size="small" label={t('common.views') || 'Saved Views'} value={selectedView} onChange={(e) => {
+            const name = e.target.value;
+            setSelectedView(name);
+            const view = savedViews.find(v => v.name === name);
+            if (view) {
+              setPipelineId(view.pipelineId);
+              setOwnerId(view.ownerId);
+              setStatus(view.status);
+              setQ(view.q);
+              setOrderBy(view.orderBy);
+              setOrder(view.order);
+            }
+          }} sx={{ minWidth: 180 }}>
+            <MenuItem value="">—</MenuItem>
+            {savedViews.map(v => <MenuItem key={v.name} value={v.name}>{v.name}</MenuItem>)}
+          </TextField>
+          <Button size="small" startIcon={<SaveIcon />} onClick={() => {
+            const name = prompt('Name this view');
+            if (!name) return;
+            const next: SavedView = { name, pipelineId, ownerId, status, q, orderBy, order } as any;
+            const list = [...savedViews.filter(v => v.name !== name), next];
+            setSavedViews(list);
+            setSelectedView(name);
+            try { localStorage.setItem('leads_saved_views', JSON.stringify(list)); } catch {}
+          }}>{t('common.save') || 'Save View'}</Button>
+          <Button size="small" startIcon={<DeleteOutlineIcon />} onClick={() => {
+            if (!selectedView) return;
+            const list = savedViews.filter(v => v.name !== selectedView);
+            setSavedViews(list);
+            setSelectedView('');
+            try { localStorage.setItem('leads_saved_views', JSON.stringify(list)); } catch {}
+          }} disabled={!selectedView}>{t('common.delete') || 'Delete'}</Button>
           <Button variant="contained" startIcon={<PersonAddAltOutlinedIcon />} onClick={() => setCreateOpen(true)}>{t('leads.new')}</Button>
           <Button variant="outlined" onClick={async () => {
             if (!token) return;
@@ -172,11 +240,24 @@ export const Leads = () => {
               {pipelines.map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
             </TextField>
             <Button size="small" variant="outlined" onClick={() => bulkApply('pipeline')}>{t('common.apply') || 'Apply'}</Button>
+            <Button size="small" variant="outlined" onClick={() => {
+              const headers = ['email','first_name','last_name','company','job_title','location'];
+              const rows = items.filter(i=>selected.includes(i.id)).map((l:any)=>[
+                l.email,l.first_name,l.last_name,l.company,l.job_title,l.location
+              ]);
+              const csv = [headers.join(','), ...rows.map(r=>r.map(val => {
+                const s = (val ?? '').toString();
+                return /[,\n\"]/.test(s) ? `"${s.replace(/\"/g,'""')}"` : s;
+              }).join(','))].join('\n');
+              const blob = new Blob([csv], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a'); a.href = url; a.download = 'leads-selected.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+            }}>Export Selected</Button>
           </CardContent>
         </Card>
       )}
       <TableContainer component={Card} className="glass slide-up">
-        <Table size="small">
+        <Table size={density==='compact' ? 'small' : 'medium'}>
           <TableHead>
             <TableRow>
               <TableCell padding="checkbox">
@@ -226,7 +307,10 @@ export const Leads = () => {
                 <TableCell>{l.company}</TableCell>
                 <TableCell>{l.job_title}</TableCell>
                 <TableCell>{l.location}</TableCell>
-                <TableCell>{l.email}</TableCell>
+                <TableCell>
+                  {l.email}
+                  <Tooltip title="Copy email"><IconButton size="small" onClick={() => { navigator.clipboard?.writeText(l.email || ''); toast.success('Copied'); }}><ContentCopyIcon fontSize="inherit" /></IconButton></Tooltip>
+                </TableCell>
                 <TableCell>
                   <StatusSelectChip
                     value={l.status}
@@ -260,6 +344,7 @@ export const Leads = () => {
                   }}>{l.do_not_contact ? (t('leads.dnc_on') || 'DNC On') : (t('leads.dnc_off') || 'DNC Off')}</Button>
                   <IconButton size="small" aria-label="view" onClick={() => setDetails(l)}><InfoOutlinedIcon fontSize="small" /></IconButton>
                   <IconButton size="small" aria-label="edit" onClick={() => setEditing({ id: l.id, email: l.email, first_name: l.first_name, last_name: l.last_name, company: l.company, job_title: l.job_title, location: l.location, phone: l.phone, linkedin_url: l.linkedin_url, website: l.website })}><EditIcon fontSize="small" /></IconButton>
+                  {l.linkedin_url && (<IconButton size="small" aria-label="linkedin" onClick={() => window.open(l.linkedin_url, '_blank')}>{/* simple anchor */}<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-10h3v10zm-1.5-11.268c-.966 0-1.75-.79-1.75-1.764 0-.975.784-1.768 1.75-1.768s1.75.793 1.75 1.768c0 .974-.784 1.764-1.75 1.764zm13.5 11.268h-3v-5.604c0-1.337-.025-3.059-1.863-3.059-1.864 0-2.15 1.455-2.15 2.961v5.702h-3v-10h2.881v1.367h.041c.401-.761 1.381-1.563 2.844-1.563 3.041 0 3.604 2.003 3.604 4.609v5.587z"/></svg></IconButton>)}
                   <Button size="small" variant="text" onClick={async () => { if (!token) return; const res = await api.leadsQualify(token, l.id); if (res.ok) toast.success(t('leads.qualification_queued') || 'Qualification queued'); else toast.error(t('leads.update_failed')); }}>{t('leads.qualify') || 'Qualify'}</Button>
                   <IconButton size="small" aria-label="delete" onClick={() => setDeleting(l.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                 </TableCell>
