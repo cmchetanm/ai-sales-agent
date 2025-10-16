@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ChatBubble } from './ChatBubble';
 
 describe('ChatBubble', () => {
@@ -7,5 +7,11 @@ describe('ChatBubble', () => {
     expect(screen.getByText('Hello')).toBeInTheDocument();
     expect(screen.getByText('now')).toBeInTheDocument();
   });
+  it('renders user bubble and copy action', () => {
+    const writeText = vi.fn();
+    (global as any).navigator = { clipboard: { writeText } } as any;
+    render(<ChatBubble role="user" content="Copy me" />);
+    fireEvent.click(screen.getByRole('button'));
+    expect(writeText).toHaveBeenCalledWith('Copy me');
+  });
 });
-

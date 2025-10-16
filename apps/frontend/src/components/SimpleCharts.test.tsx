@@ -13,8 +13,9 @@ describe('SimpleCharts helpers', () => {
   });
   it('renders line and pie charts', () => {
     const { container } = render(<>
-      <SimpleLineChart points={[{ x: '2025-01-01', y: 2 }]} />
-      <SimplePieChart data={[{ label: 'X', value: 3 }]} />
+      <SimpleLineChart points={[{ x: '2025-01-01', y: 2 }, { x: '2025-01-02', y: 4 }]} />
+      {/* include a zero slice to exercise small arc branches */}
+      <SimplePieChart data={[{ label: 'X', value: 3 }, { label: 'Y', value: 0 }]} />
     </>);
     expect(container.querySelectorAll('svg').length).toBeGreaterThan(0);
   });

@@ -189,6 +189,11 @@ def _make_tools(account_id: int, session_id: str, locale: str):
     class ProfileInput(BaseModel):
         free_text: str
 
+    class PackInput(BaseModel):
+        lead_ids: Optional[List[int]] = Field(default=None, description="IDs of leads to include")
+        filters: Optional[Filters] = Field(default=None, description="Filters to select leads")
+        name: Optional[str] = Field(default=None, description="Optional pack name")
+
     def _format_bullets(rows: list[dict], limit: int = 5) -> str:
         bullets = []
         for r in (rows or [])[:limit]:
@@ -254,6 +259,23 @@ def _make_tools(account_id: int, session_id: str, locale: str):
             {"account_id": account_id, "profile": {"questionnaire": {"free_text": inp.free_text}}},
         )
         return {"status": "ok" if ok else "error", "code": status}
+
+    def tool_create_lead_pack(inp: PackInput) -> dict:
+        payload: Dict = {"account_id": account_id}
+        if inp.lead_ids:
+            payload["lead_ids"] = list(inp.lead_ids)
+        if inp.filters is not None:
+            payload["filters"] = inp.filters.model_dump(exclude_none=True)
+        if inp.name:
+            payload["name"] = inp.name
+        # Require at least one of lead_ids or filters
+        if not payload.get("lead_ids") and not payload.get("filters"):
+            return {"status": "error", "code": 400, "message": "lead_ids or filters required"}
+        ok, status, body = _post_internal_json("/api/v1/internal/lead_packs", payload)
+        out: Dict = {"status": "ok" if ok else "error", "code": status}
+        if isinstance(body, dict):
+            out.update({"pack": body.get("lead_pack") or body})
+        return out
 
     return [
         StructuredTool.from_function(
