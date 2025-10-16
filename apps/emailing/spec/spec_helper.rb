@@ -3,8 +3,9 @@
 require 'simplecov'
 SimpleCov.start do
   enable_coverage :branch
-  minimum_coverage 80
-  add_filter %w[config spec app/channels app/jobs app/mailers]
+  minimum_coverage 90
+  # Do not filter app/jobs so we accurately measure real coverage
+  add_filter %w[config spec app/channels app/mailers]
 end
 SimpleCov.formatter = SimpleCov::Formatter::MultiFormatter.new([
   SimpleCov::Formatter::HTMLFormatter,

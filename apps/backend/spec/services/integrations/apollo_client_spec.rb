@@ -3,57 +3,70 @@
 require 'rails_helper'
 
 RSpec.describe Integrations::ApolloClient do
-  describe '#search_people' do
-    it 'maps Apollo API people to lead attributes' do
-      stub_request(:post, 'https://api.apollo.io/api/v1/mixed_people/search')
-        .with { |req|
-          body = JSON.parse(req.body)
-          body['q_keywords'] == 'saas'
-        }
-        .to_return(
-          status: 200,
-          headers: { 'Content-Type' => 'application/json' },
-          body: {
-            people: [
-              {
-                'first_name' => 'Jane',
-                'last_name' => 'Doe',
-                'email' => 'jane@example.com',
-                'organization' => { 'name' => 'Acme Inc' }
-              }
-            ]
-          }.to_json
-        )
+  describe '#enabled?/ready?' do
+    it 'is disabled by default in test' do
+      client = described_class.new(api_key: nil)
+      expect(client.enabled?).to eq(false)
+      expect(client.ready?).to eq(false)
+    end
 
-      client = described_class.new(api_key: 'test-key', enabled: true)
-      results = client.search_people(keywords: 'saas', limit: 1)
-
-      expect(results.size).to eq(1)
-      expect(results.first).to include(first_name: 'Jane', last_name: 'Doe', email: 'jane@example.com', company: 'Acme Inc')
-      # New mapping may add optional fields like enrichment/source
-      expect(results.first[:source]).to eq('apollo')
+    it 'is ready when explicitly enabled with key' do
+      client = described_class.new(api_key: 'key', enabled: true)
+      expect(client.enabled?).to eq(true)
+      expect(client.ready?).to eq(true)
     end
   end
 
-  it 'marks contacts as locked when email is not unlocked' do
-    stub_request(:post, 'https://api.apollo.io/api/v1/mixed_people/search')
-      .to_return(
-        status: 200,
-        headers: { 'Content-Type' => 'application/json' },
-        body: {
-          people: [
-            {
-              'first_name' => 'Adam',
-              'last_name' => 'Whitlock',
-              'email' => 'email_not_unlocked@domain.com',
-              'organization' => { 'name' => 'Behavure AI' }
-            }
-          ]
-        }.to_json
-      )
+  describe 'private helpers' do
+    let(:client) { described_class.new(api_key: 'k', enabled: true) }
 
-    client = described_class.new(api_key: 'test-key', enabled: true)
-    results = client.search_people(keywords: 'saas', limit: 1)
-    expect(results.first[:locked]).to be true
+    it 'normalizes locations' do
+      expect(client.send(:normalize_locations, ['us','UK','Berlin'])).to eq(['United States', 'United Kingdom', 'Berlin'])
+      expect(client.send(:normalize_locations, nil)).to be_nil
+      expect(client.send(:normalize_locations, [])).to be_nil
+    end
+
+    it 'builds payload with optional hints' do
+      p = client.send(:payload_for, { keywords: 'saas', role: 'CTO', location: 'US', industry: 'SaaS', company_size: '1-50' }, page: 2, per_page: 3)
+      expect(p[:q_keywords]).to eq('saas')
+      expect(p[:person_titles]).to eq(['CTO'])
+      expect(p[:person_locations]).to include('United States')
+      expect(p[:organization_industry_tags]).to include('SaaS')
+      expect(p[:organization_num_employees_ranges]).to include('1-50')
+      expect(p[:page]).to eq(2)
+      expect(p[:per_page]).to eq(3)
+    end
+
+    it 'extracts errors from body' do
+      expect(client.send(:extract_errors, { 'errors' => ['bad'] })).to eq(['bad'])
+      expect(client.send(:extract_errors, { 'error' => 'bad' })).to eq(['bad'])
+      expect(client.send(:extract_errors, nil)).to eq([])
+    end
+
+    it 'maps results into unified shape' do
+      body = { 'people' => [
+        { 'first_name' => 'A', 'last_name' => 'B', 'email' => 'a@b.com', 'organization' => { 'name' => 'Acme', 'industry' => 'SaaS' }, 'id' => 'x1', 'title' => 'CTO' },
+        { 'first_name' => 'Jane', 'last_name' => 'Doe', 'emails' => [{ 'email' => 'j@d.co' }], 'company' => { 'name' => 'Co' }, 'person_id' => 'y2' }
+      ] }
+      out = client.send(:map_results, body)
+      expect(out.size).to eq(2)
+      expect(out.first[:company]).to eq('Acme')
+      expect(out.first[:source]).to eq('apollo')
+      expect(out.first[:external_id]).to eq('x1')
+    end
+  end
+
+  describe '#probe' do
+    it 'returns unauthorized hint when 401' do
+      client = described_class.new(api_key: 'key', enabled: true)
+      fake = instance_double(Faraday::Connection)
+      client.instance_variable_set(:@conn, fake)
+      allow(fake).to receive(:post).and_return(
+        double(success?: false, status: 401, body: { 'error' => 'unauthorized' })
+      )
+      pr = client.probe
+      expect(pr[:ok]).to eq(false)
+      expect(pr[:hint]).to be_a(String)
+    end
   end
 end

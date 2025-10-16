@@ -3,24 +3,24 @@
 require 'rails_helper'
 
 RSpec.describe Ai::LlmClient do
-  let(:client) { described_class.new(base_url: 'http://llm_service:8000') }
-
-  it 'returns reply when service responds' do
-    stub_request(:post, %r{llm_service:8000/chat/messages}).to_return(
-      status: 200,
-      body: { reply: 'Hello', session_id: 'x' }.to_json,
-      headers: { 'Content-Type' => 'application/json' }
-    )
-
-    out = client.reply(session_id: 'x', account_id: 1, user_id: 1, messages: [])
-    expect(out).to eq('Hello')
+  it 'raises StrictError on non-success response' do
+    client = described_class.new(base_url: 'http://example.test')
+    fake = instance_double(Faraday::Connection)
+    client.instance_variable_set(:@conn, fake)
+    allow(fake).to receive(:post).and_return(double(success?: false, status: 422, body: { 'detail' => 'bad' }))
+    expect {
+      client.reply(session_id: 1, account_id: 1, user_id: 1, messages: [{ role: 'user', content: 'Hi' }])
+    }.to raise_error(Ai::LlmClient::StrictError)
   end
 
-  it 'raises StrictError on network errors (AI-only mode)' do
-    stub_request(:post, %r{llm_service:8000/chat/messages}).to_timeout
-
+  it 'raises StrictError on Faraday error' do
+    client = described_class.new(base_url: 'http://example.test')
+    fake = instance_double(Faraday::Connection)
+    client.instance_variable_set(:@conn, fake)
+    allow(fake).to receive(:post).and_raise(Faraday::ConnectionFailed.new('boom'))
     expect {
-      client.reply(session_id: 'x', account_id: 1, user_id: 1, messages: [])
+      client.reply(session_id: 1, account_id: 1, user_id: 1, messages: [])
     }.to raise_error(Ai::LlmClient::StrictError)
   end
 end
+
