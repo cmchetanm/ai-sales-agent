@@ -7,11 +7,7 @@ module Api
         def show
           render json: {
             user: UserSerializer.new(current_user).serializable_hash,
-            account: {
-              id: current_account.id,
-              name: current_account.name,
-              plan: current_account.plan.slug
-            }
+            account: AccountSerializer.new(current_account).serializable_hash
           }
         end
       end
