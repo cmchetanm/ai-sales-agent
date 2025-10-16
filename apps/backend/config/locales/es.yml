@@ -3,7 +3,7 @@ es:
   errors:
     not_authorized: "No autorizado"
     not_found: "No encontrado"
-    bad_request: "Solicitud incorrecta"
+    bad_request: "Solicitud inválida"
   api:
     status:
       ok: "ok"
@@ -15,11 +15,11 @@ es:
     formats:
       default: "%Y-%m-%d %H:%M:%S"
       short: "%d %b %H:%M"
-      long: "%d de %B de %Y %H:%M"
+      long: "%d %B %Y %H:%M"
   date:
     formats:
       default: "%Y-%m-%d"
-      long: "%d de %B de %Y"
+      long: "%d %B %Y"
       short: "%d %b"
   time:
     formats:
@@ -58,12 +58,12 @@ es:
         status: "Estado"
       chat_message:
         content: "Contenido"
-        sent_at: "Enviado"
+        sent_at: "Enviado a las"
     errors:
       messages:
         blank: "no puede estar en blanco"
         invalid: "no es válido"
-        taken: "ya está en uso"
+        taken: "ya ha sido tomado"
         not_a_number: "no es un número"
         too_short: "es demasiado corto"
         too_long: "es demasiado largo"
