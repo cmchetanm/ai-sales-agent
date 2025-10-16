@@ -9,6 +9,12 @@ import { Leads } from './pages/Leads';
 import { Campaigns } from './pages/Campaigns';
 import { Account } from './pages/Account';
 import { AgentChat } from './pages/AgentChat';
+import { Contacts } from './pages/Contacts';
+import { Deals } from './pages/Deals';
+import { ContactDetails } from './pages/ContactDetails';
+import { DealDetails } from './pages/DealDetails';
+import { Companies } from './pages/Companies';
+import { CompanyDetails } from './pages/CompanyDetails';
 import { Toaster } from 'sonner';
 import { ThemeModeProvider } from './theme';
 import i18n from './i18n';
@@ -66,6 +72,12 @@ const App = () => (
             <Route path="pipelines" element={<Pipelines />} />
             <Route path="chat" element={<AgentChat />} />
             <Route path="leads" element={<Leads />} />
+            <Route path="contacts" element={<Contacts />} />
+            <Route path="contacts/:id" element={<ContactDetails />} />
+            <Route path="companies" element={<Companies />} />
+            <Route path="companies/:id" element={<CompanyDetails />} />
+            <Route path="deals" element={<Deals />} />
+            <Route path="deals/:id" element={<DealDetails />} />
             <Route path="campaigns" element={<Campaigns />} />
             <Route path="account" element={<Account />} />
           </Route>

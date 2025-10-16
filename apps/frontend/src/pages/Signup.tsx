@@ -49,7 +49,7 @@ export const Signup = () => {
               <InputAdornment position="end"><IconButton size="small" onClick={() => setShowPw2((s)=>!s)}>{showPw2 ? <VisibilityOff/> : <Visibility/>}</IconButton></InputAdornment>
             ) }} />
             <Button variant="contained" type="submit" disabled={loading}>{loading ? t('signup.submitting') : t('signup.submit')}</Button>
-            <Typography variant="body2" color="text.secondary">{t('signup.footer', { link: '' })}<Link to="/login">{t('signup.sign_in')}</Link></Typography>
+            <Typography variant="body2" color="text.secondary">{t('signup.footer', { link: '' })}<Link to={`/${(i18n.language||'en').split('-')[0]}/login`}>{t('signup.sign_in')}</Link></Typography>
           </Stack>
         </CardContent>
       </Card>

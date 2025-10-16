@@ -5,6 +5,8 @@ module Api
     class DealsController < Api::BaseController
       def index
         scope = policy_scope(current_account.deals)
+        scope = scope.where(company_id: params[:company_id]) if params[:company_id].present?
+        scope = scope.where(contact_id: params[:contact_id]) if params[:contact_id].present?
         scope = scope.where(stage: params[:stage]) if params[:stage].present?
         if params[:q].present?
           q = "%#{params[:q].to_s.downcase}%"
@@ -62,4 +64,3 @@ module Api
     end
   end
 end
-

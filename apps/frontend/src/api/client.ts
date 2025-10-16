@@ -61,6 +61,95 @@ export const api = {
     {},
     token
   ),
+  // Contacts
+  contactsIndex: (token: string, params: Record<string, any> = {}) => request<{ contacts: any[]; pagination: any }>(
+    `/api/v1/contacts${toQS(params)}`,
+    {},
+    token
+  ),
+  // Companies
+  companiesIndex: (token: string, params: Record<string, any> = {}) => request<{ companies: any[]; pagination: any }>(
+    `/api/v1/companies${toQS(params)}`,
+    {},
+    token
+  ),
+  companiesShow: (token: string, id: number) => request<{ company: any }>(
+    `/api/v1/companies/${id}`,
+    {},
+    token
+  ),
+  companiesCreate: (token: string, attrs: any) => request<{ company: any }>(
+    '/api/v1/companies',
+    { method: 'POST', body: JSON.stringify({ company: attrs }) },
+    token
+  ),
+  companiesUpdate: (token: string, id: number, attrs: any) => request<{ company: any }>(
+    `/api/v1/companies/${id}`,
+    { method: 'PATCH', body: JSON.stringify({ company: attrs }) },
+    token
+  ),
+  companiesDelete: (token: string, id: number) => request<void>(
+    `/api/v1/companies/${id}`,
+    { method: 'DELETE' },
+    token
+  ),
+  companiesActivitiesIndex: (token: string, companyId: number, params: Record<string, any> = {}) => request<{ activities: any[]; pagination?: any }>(
+    `/api/v1/companies/${companyId}/activities${toQS(params)}`,
+    {},
+    token
+  ),
+  contactsCreate: (token: string, attrs: any) => request<{ contact: any }>(
+    '/api/v1/contacts',
+    { method: 'POST', body: JSON.stringify({ contact: attrs }) },
+    token
+  ),
+  contactsShow: (token: string, id: number) => request<{ contact: any }>(
+    `/api/v1/contacts/${id}`,
+    {},
+    token
+  ),
+  contactsUpdate: (token: string, id: number, attrs: any) => request<{ contact: any }>(
+    `/api/v1/contacts/${id}`,
+    { method: 'PATCH', body: JSON.stringify({ contact: attrs }) },
+    token
+  ),
+  contactsDelete: (token: string, id: number) => request<void>(
+    `/api/v1/contacts/${id}`,
+    { method: 'DELETE' },
+    token
+  ),
+  // Deals
+  dealsIndex: (token: string, params: Record<string, any> = {}) => request<{ deals: any[]; pagination: any }>(
+    `/api/v1/deals${toQS(params)}`,
+    {},
+    token
+  ),
+  dealsCreate: (token: string, attrs: any) => request<{ deal: any }>(
+    '/api/v1/deals',
+    { method: 'POST', body: JSON.stringify({ deal: attrs }) },
+    token
+  ),
+  dealsShow: (token: string, id: number) => request<{ deal: any }>(
+    `/api/v1/deals/${id}`,
+    {},
+    token
+  ),
+  dealsUpdate: (token: string, id: number, attrs: any) => request<{ deal: any }>(
+    `/api/v1/deals/${id}`,
+    { method: 'PATCH', body: JSON.stringify({ deal: attrs }) },
+    token
+  ),
+  dealsDelete: (token: string, id: number) => request<void>(
+    `/api/v1/deals/${id}`,
+    { method: 'DELETE' },
+    token
+  ),
+  // Lead conversion
+  leadsConvert: (token: string, id: number, options: { create_deal?: boolean; deal?: any } = {}) => request<{ contact: any; deal?: any }>(
+    `/api/v1/leads/${id}/convert`,
+    { method: 'POST', body: JSON.stringify(options) },
+    token
+  ),
   signIn: (email: string, password: string) =>
     request<{ user: any; token: string }>(
       '/api/v1/auth/sign_in',
@@ -135,6 +224,26 @@ export const api = {
   ),
   leadsActivitiesCreate: (token: string, leadId: number, attrs: any) => request<{ activity: any }>(
     `/api/v1/leads/${leadId}/activities`,
+    { method: 'POST', body: JSON.stringify({ activity: attrs }) },
+    token
+  ),
+  contactsActivitiesIndex: (token: string, contactId: number, params: Record<string, any> = {}) => request<{ activities: any[]; pagination?: any }>(
+    `/api/v1/contacts/${contactId}/activities${toQS(params)}`,
+    {},
+    token
+  ),
+  contactsActivitiesCreate: (token: string, contactId: number, attrs: any) => request<{ activity: any }>(
+    `/api/v1/contacts/${contactId}/activities`,
+    { method: 'POST', body: JSON.stringify({ activity: attrs }) },
+    token
+  ),
+  dealsActivitiesIndex: (token: string, dealId: number, params: Record<string, any> = {}) => request<{ activities: any[]; pagination?: any }>(
+    `/api/v1/deals/${dealId}/activities${toQS(params)}`,
+    {},
+    token
+  ),
+  dealsActivitiesCreate: (token: string, dealId: number, attrs: any) => request<{ activity: any }>(
+    `/api/v1/deals/${dealId}/activities`,
     { method: 'POST', body: JSON.stringify({ activity: attrs }) },
     token
   ),

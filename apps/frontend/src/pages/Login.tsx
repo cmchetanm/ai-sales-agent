@@ -60,7 +60,7 @@ export const Login = () => {
             <Button variant="outlined" type="button" onClick={() => { setEmail('demo@acme.test'); setPassword('DemoPass123!'); }}>
               Use Demo Account
             </Button>
-            <Typography variant="body2" color="text.secondary">{t('login.footer', { link: '' })}<Link to="/signup">{t('login.create_one')}</Link></Typography>
+            <Typography variant="body2" color="text.secondary">{t('login.footer', { link: '' })}<Link to={`/${(i18n.language||'en').split('-')[0]}/signup`}>{t('login.create_one')}</Link></Typography>
             <Typography variant="caption" color="text.secondary">Tip: Press Ctrl/Cmd+K for the Command Palette</Typography>
           </Stack>
         </CardContent>

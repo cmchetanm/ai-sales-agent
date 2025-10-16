@@ -54,6 +54,7 @@ Rails.application.routes.draw do
             post :qualify
             post :convert
           end
+          resources :activities, only: [:index, :create]
         end
         resources :campaigns do
           member do
@@ -62,8 +63,15 @@ Rails.application.routes.draw do
             post :pause
           end
         end
-        resources :contacts
-        resources :deals
+        resources :contacts do
+          resources :activities, only: [:index, :create]
+        end
+        resources :deals do
+          resources :activities, only: [:index, :create]
+        end
+        resources :companies do
+          resources :activities, only: [:index]
+        end
         resources :users, only: [:index]
         resource :dashboard, only: [:show], controller: :dashboard
         resources :segments, only: %i[index create show destroy]
@@ -151,8 +159,15 @@ Rails.application.routes.draw do
           post :pause
         end
       end
-      resources :contacts
-      resources :deals
+      resources :contacts do
+        resources :activities, only: [:index, :create]
+      end
+      resources :deals do
+        resources :activities, only: [:index, :create]
+      end
+      resources :companies do
+        resources :activities, only: [:index]
+      end
       resources :users, only: [:index]
       resources :chat_sessions, only: %i[index create show] do
         resources :messages, only: %i[index create], controller: 'chat_messages'

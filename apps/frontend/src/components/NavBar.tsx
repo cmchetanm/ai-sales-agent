@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 
@@ -7,20 +7,22 @@ export const NavBar = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
+  const params = useParams();
+  const lang = (params.lng || (typeof navigator !== 'undefined' ? navigator.language : 'en')).split('-')[0] || 'en';
   const logout = async () => {
     await signOut();
-    navigate('/login');
+    navigate(`/${lang}/login`);
   };
 
   return (
     <header style={styles.header}>
       <div style={styles.left}>
-        <Link to="/" style={styles.brand}>{t('app.title')}</Link>
+        <Link to={`/${lang}/`} style={styles.brand}>{t('app.title')}</Link>
         <nav style={styles.nav}>
-          <Link to="/pipelines" style={styles.link}>{t('nav.pipelines')}</Link>
-          <Link to="/leads" style={styles.link}>{t('nav.leads')}</Link>
-          <Link to="/campaigns" style={styles.link}>{t('nav.campaigns')}</Link>
-          <Link to="/account" style={styles.link}>{t('nav.account')}</Link>
+          <Link to={`/${lang}/pipelines`} style={styles.link}>{t('nav.pipelines')}</Link>
+          <Link to={`/${lang}/leads`} style={styles.link}>{t('nav.leads')}</Link>
+          <Link to={`/${lang}/campaigns`} style={styles.link}>{t('nav.campaigns')}</Link>
+          <Link to={`/${lang}/account`} style={styles.link}>{t('nav.account')}</Link>
         </nav>
       </div>
       <div style={styles.right}>

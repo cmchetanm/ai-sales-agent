@@ -25,6 +25,9 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import LanOutlinedIcon from '@mui/icons-material/LanOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
+import ContactsOutlinedIcon from '@mui/icons-material/ContactsOutlined';
+import MonetizationOnOutlinedIcon from '@mui/icons-material/MonetizationOnOutlined';
+import CorporateFareOutlinedIcon from '@mui/icons-material/CorporateFareOutlined';
 import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -98,6 +101,9 @@ export function LayoutMui() {
         <NavItem compact={compact} baseLang={lang} to="/pipelines" icon={<LanOutlinedIcon />} label={t('nav.pipelines')} />
         <NavItem compact={compact} baseLang={lang} to="/chat" icon={<ChatBubbleOutlineIcon />} label={t('nav.chat')} />
         <NavItem compact={compact} baseLang={lang} to="/leads" icon={<PeopleAltOutlinedIcon />} label={t('nav.leads')} />
+        <NavItem compact={compact} baseLang={lang} to="/contacts" icon={<ContactsOutlinedIcon />} label={t('nav.contacts')} />
+        <NavItem compact={compact} baseLang={lang} to="/companies" icon={<CorporateFareOutlinedIcon />} label={t('nav.companies') || 'Companies'} />
+        <NavItem compact={compact} baseLang={lang} to="/deals" icon={<MonetizationOnOutlinedIcon />} label={t('nav.deals')} />
         <NavItem compact={compact} baseLang={lang} to="/campaigns" icon={<MailOutlineIcon />} label={t('nav.campaigns')} />
         <NavItem compact={compact} baseLang={lang} to="/account" icon={<SettingsOutlinedIcon />} label={t('nav.account')} />
       </List>
@@ -242,6 +248,7 @@ function Crumbs() {
     '': t('nav.dashboard'),
     pipelines: t('nav.pipelines'),
     leads: t('nav.leads'),
+    companies: t('nav.companies') || 'Companies',
     campaigns: t('nav.campaigns'),
     chat: t('nav.chat'),
     account: t('nav.account'),

@@ -11,8 +11,12 @@ class ContactSerializer < ApplicationSerializer
       email: resource.email,
       phone: resource.phone,
       title: resource.title,
-      created_at: resource.created_at
+      created_at: resource.created_at,
+      company: (resource.company && {
+        id: resource.company.id,
+        name: resource.company.name,
+        domain: resource.company.domain
+      })
     }
   end
 end
-

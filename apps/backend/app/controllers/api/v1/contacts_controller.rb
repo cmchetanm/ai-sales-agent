@@ -5,6 +5,7 @@ module Api
     class ContactsController < Api::BaseController
       def index
         scope = policy_scope(current_account.contacts)
+        scope = scope.where(company_id: params[:company_id]) if params[:company_id].present?
         if params[:q].present?
           q = "%#{params[:q].to_s.downcase}%"
           scope = scope.where('LOWER(email) LIKE :q OR LOWER(first_name) LIKE :q OR LOWER(last_name) LIKE :q', q:)
@@ -61,4 +62,3 @@ module Api
     end
   end
 end
-

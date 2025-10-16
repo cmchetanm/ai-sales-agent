@@ -20,6 +20,7 @@ import PersonAddAltOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined';
 import CloudDownloadOutlinedIcon from '@mui/icons-material/CloudDownloadOutlined';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import TransformIcon from '@mui/icons-material/Transform';
 import { useLocation } from 'react-router-dom';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ViewDayOutlinedIcon from '@mui/icons-material/ViewDayOutlined';
@@ -345,6 +346,7 @@ export const Leads = () => {
                   <IconButton size="small" aria-label="view" onClick={() => setDetails(l)}><InfoOutlinedIcon fontSize="small" /></IconButton>
                   <IconButton size="small" aria-label="edit" onClick={() => setEditing({ id: l.id, email: l.email, first_name: l.first_name, last_name: l.last_name, company: l.company, job_title: l.job_title, location: l.location, phone: l.phone, linkedin_url: l.linkedin_url, website: l.website })}><EditIcon fontSize="small" /></IconButton>
                   {l.linkedin_url && (<IconButton size="small" aria-label="linkedin" onClick={() => window.open(l.linkedin_url, '_blank')}>{/* simple anchor */}<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-10h3v10zm-1.5-11.268c-.966 0-1.75-.79-1.75-1.764 0-.975.784-1.768 1.75-1.768s1.75.793 1.75 1.768c0 .974-.784 1.764-1.75 1.764zm13.5 11.268h-3v-5.604c0-1.337-.025-3.059-1.863-3.059-1.864 0-2.15 1.455-2.15 2.961v5.702h-3v-10h2.881v1.367h.041c.401-.761 1.381-1.563 2.844-1.563 3.041 0 3.604 2.003 3.604 4.609v5.587z"/></svg></IconButton>)}
+                  <Button size="small" startIcon={<TransformIcon />} onClick={async ()=>{ if(!token) return; const res = await api.leadsConvert(token, l.id, { create_deal: true, deal: { name: `Deal for ${l.first_name||''} ${l.last_name||''}`.trim() || l.email } }); if (res.ok) { toast.success(t('leads.converted') || 'Converted'); await load(); } else { toast.error(t('leads.update_failed')); } }}>{t('leads.convert') || 'Convert'}</Button>
                   <Button size="small" variant="text" onClick={async () => { if (!token) return; const res = await api.leadsQualify(token, l.id); if (res.ok) toast.success(t('leads.qualification_queued') || 'Qualification queued'); else toast.error(t('leads.update_failed')); }}>{t('leads.qualify') || 'Qualify'}</Button>
                   <IconButton size="small" aria-label="delete" onClick={() => setDeleting(l.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                 </TableCell>

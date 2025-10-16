@@ -15,8 +15,18 @@ class DealSerializer < ApplicationSerializer
       probability: resource.probability,
       close_date: resource.close_date,
       metadata: resource.metadata,
-      created_at: resource.created_at
+      created_at: resource.created_at,
+      contact: (resource.contact && {
+        id: resource.contact.id,
+        email: resource.contact.email,
+        first_name: resource.contact.first_name,
+        last_name: resource.contact.last_name
+      }),
+      company: (resource.company && {
+        id: resource.company.id,
+        name: resource.company.name,
+        domain: resource.company.domain
+      })
     }
   end
 end
-

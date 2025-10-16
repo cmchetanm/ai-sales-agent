@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Stack, TextField, Chip, Link } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Stack, TextField, Chip, Link, MenuItem } from '@mui/material';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
@@ -7,11 +7,25 @@ export function LeadDetailsDialog({ open, onClose, lead }: { open: boolean; onCl
   const { token } = useAuth();
   const [activities, setActivities] = useState<any[]>([]);
   const [note, setNote] = useState('');
+  const [kind, setKind] = useState('');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [after, setAfter] = useState('');
+  const [before, setBefore] = useState('');
 
-  const load = async () => {
+  const load = async (targetPage = page) => {
     if (!token || !lead) return;
-    const res = await api.leadsActivitiesIndex(token, lead.id, { per_page: 20 });
-    if (res.ok && res.data) setActivities(res.data.activities);
+    const res = await api.leadsActivitiesIndex(token, lead.id, {
+      per_page: 10,
+      page: targetPage,
+      kind: kind || undefined,
+      happened_after: after || undefined,
+      happened_before: before || undefined,
+    });
+    if (res.ok && res.data) {
+      setActivities(res.data.activities);
+      const p = (res.data as any).pagination; if (p) { setPages(p.pages || 1); setPage(p.page || 1); }
+    }
   };
 
   useEffect(() => { if (open) load(); }, [open]);
@@ -54,6 +68,15 @@ export function LeadDetailsDialog({ open, onClose, lead }: { open: boolean; onCl
         </Stack>
         <Stack spacing={1} sx={{ flex: 1 }}>
           <Typography variant="subtitle2">Timeline</Typography>
+          <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+            <TextField select size="small" label="Type" value={kind} onChange={(e)=>{ setKind(e.target.value); setPage(1); }} sx={{ minWidth: 160 }}>
+              <MenuItem value="">All</MenuItem>
+              {['email_sent','email_opened','email_replied','call','meeting','note'].map(k => <MenuItem key={k} value={k}>{k}</MenuItem>)}
+            </TextField>
+            <TextField size="small" type="date" label="After" InputLabelProps={{ shrink: true }} value={after} onChange={(e)=>{ setAfter(e.target.value); setPage(1); }} />
+            <TextField size="small" type="date" label="Before" InputLabelProps={{ shrink: true }} value={before} onChange={(e)=>{ setBefore(e.target.value); setPage(1); }} />
+            <Button size="small" onClick={()=>load(1)}>Apply</Button>
+          </Stack>
           <Stack spacing={1}>
             {activities.map((a, i) => (
               <div key={i} style={{ padding: 8, border: '1px solid rgba(0,0,0,0.06)', borderRadius: 8 }}>
@@ -61,6 +84,11 @@ export function LeadDetailsDialog({ open, onClose, lead }: { open: boolean; onCl
                 <Typography variant="body2">{a.content}</Typography>
               </div>
             ))}
+          </Stack>
+          <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 1 }}>
+            <Button size="small" disabled={page<=1} onClick={()=>load(page-1)}>Prev</Button>
+            <Typography variant="caption" sx={{ alignSelf: 'center' }}>Page {page} of {pages}</Typography>
+            <Button size="small" disabled={page>=pages} onClick={()=>load(page+1)}>Next</Button>
           </Stack>
         </Stack>
       </DialogContent>
