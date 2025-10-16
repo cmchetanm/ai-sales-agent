@@ -153,6 +153,15 @@ const resources = {
       },
       account: {
         title: 'Account',
+        website: 'Website',
+        domain: 'Domain',
+        summary: 'Company Summary',
+        industries: 'Target Industries',
+        roles: 'Target Roles',
+        locations: 'Target Locations',
+        icp: 'Ideal Customer Profile (JSON)',
+        saved: 'Account saved',
+        update_failed: 'Update failed',
       }
     }
   },
@@ -306,6 +315,15 @@ const resources = {
       },
       account: {
         title: 'Cuenta',
+        website: 'Sitio web',
+        domain: 'Dominio',
+        summary: 'Resumen de la empresa',
+        industries: 'Industrias objetivo',
+        roles: 'Roles objetivo',
+        locations: 'Ubicaciones objetivo',
+        icp: 'Perfil de cliente ideal (JSON)',
+        saved: 'Cuenta guardada',
+        update_failed: 'Fallo al actualizar',
       }
     }
   }
@@ -460,6 +478,15 @@ const resources = {
       },
       account: {
         title: 'Compte',
+        website: 'Site web',
+        domain: 'Domaine',
+        summary: 'Résumé de l’entreprise',
+        industries: 'Secteurs cibles',
+        roles: 'Rôles cibles',
+        locations: 'Lieux cibles',
+        icp: 'Profil client idéal (JSON)',
+        saved: 'Compte enregistré',
+        update_failed: 'Échec de la mise à jour',
       }
     }
   }
