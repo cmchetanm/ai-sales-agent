@@ -52,6 +52,7 @@ Rails.application.routes.draw do
           end
           member do
             post :qualify
+            post :convert
           end
         end
         resources :campaigns do
@@ -61,6 +62,8 @@ Rails.application.routes.draw do
             post :pause
           end
         end
+        resources :contacts
+        resources :deals
         resources :users, only: [:index]
         resource :dashboard, only: [:show], controller: :dashboard
         resources :segments, only: %i[index create show destroy]
@@ -136,6 +139,9 @@ Rails.application.routes.draw do
           post :import
           patch :bulk_update
         end
+        member do
+          post :convert
+        end
       end
       resources :email_templates
       resources :campaigns do
@@ -145,6 +151,8 @@ Rails.application.routes.draw do
           post :pause
         end
       end
+      resources :contacts
+      resources :deals
       resources :users, only: [:index]
       resources :chat_sessions, only: %i[index create show] do
         resources :messages, only: %i[index create], controller: 'chat_messages'

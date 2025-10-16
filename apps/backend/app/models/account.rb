@@ -17,6 +17,8 @@ class Account < ApplicationRecord
   has_many :chat_sessions, dependent: :destroy
   has_many :companies, dependent: :destroy
   has_many :activities, dependent: :destroy
+  has_many :contacts, dependent: :destroy
+  has_many :deals, dependent: :destroy
 
   accepts_nested_attributes_for :profile
 

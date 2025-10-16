@@ -54,6 +54,46 @@ module Api
         head :no_content
       end
 
+      # POST /api/v1/leads/:id/convert
+      # params: { create_deal?, deal?: { name, amount_cents, stage, close_date } }
+      def convert
+        lead = current_account.leads.find(params[:id])
+        authorize lead, :update?
+        company = if lead.company.present?
+                    current_account.companies.find_or_create_by!(name: lead.company)
+                  else
+                    nil
+                  end
+        contact = current_account.contacts.find_or_initialize_by(email: lead.email)
+        contact.assign_attributes({
+          first_name: lead.first_name,
+          last_name: lead.last_name,
+          phone: lead.phone,
+          title: lead.job_title,
+          company: company
+        }.compact)
+        contact.company = company if company
+        contact.save!
+
+        created_deal = nil
+        if ActiveModel::Type::Boolean.new.cast(params[:create_deal])
+          d = params[:deal] || {}
+          created_deal = current_account.deals.create!(
+            name: (d[:name].presence || "Deal for #{contact.display_name}"),
+            amount_cents: d[:amount_cents].to_i,
+            stage: (d[:stage].presence || 'qualification'),
+            close_date: d[:close_date],
+            contact: contact,
+            company: company
+          )
+        end
+        lead.update!(status: 'archived')
+        current_account.activities.create!(lead: lead, kind: 'note', content: 'Lead converted', happened_at: Time.current)
+        render json: { contact: ContactSerializer.new(contact).serializable_hash, deal: (created_deal ? DealSerializer.new(created_deal).serializable_hash : nil) }, status: :ok
+      rescue ActiveRecord::RecordInvalid => e
+        render json: { errors: e.record.errors.full_messages }, status: :unprocessable_content
+      end
+
       # POST /api/v1/leads/:id/qualify
       def qualify
         lead = current_account.leads.find(params[:id])

@@ -25,5 +25,12 @@ RSpec.describe 'API V1 Leads CRUD', type: :request do
     expect(response).to have_http_status(:no_content)
     expect(account.leads.where(id: lead_id)).to be_empty
   end
-end
 
+  it 'converts a lead into contact and optional deal' do
+    lead = create(:lead, account: account, pipeline: pipeline, email: 'c@example.com', first_name: 'C', last_name: 'User', company: 'Acme')
+    post "/api/v1/leads/#{lead.id}/convert", headers: auth_headers(user), params: { create_deal: true, deal: { name: 'Converted Deal', amount_cents: 5000 } }.to_json
+    expect(response).to have_http_status(:ok)
+    expect(json_body.dig('contact', 'email')).to eq('c@example.com')
+    expect(json_body.dig('deal', 'name')).to eq('Converted Deal')
+  end
+end
