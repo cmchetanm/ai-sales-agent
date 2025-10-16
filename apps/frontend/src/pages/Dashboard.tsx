@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
-import { Card, CardContent, Grid2 as Grid, Typography, Box, Button } from '@mui/material';
+import { Card, CardContent, Grid2 as Grid, Typography, Box, Button, CircularProgress } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import PeopleOutlineIcon from '@mui/icons-material/PeopleOutline';
@@ -11,10 +11,13 @@ import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import UploadIcon from '@mui/icons-material/Upload';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { Link as RouterLink } from 'react-router-dom';
+import { SimpleBarChart, SimpleLineChart, SimplePieChart } from '../components/SimpleCharts';
 
 export const Dashboard = () => {
   const { token, user, account } = useAuth();
   const [health, setHealth] = useState<string>('...');
+  const [stats, setStats] = useState<any | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -23,6 +26,14 @@ export const Dashboard = () => {
       if (!mounted) return;
       setHealth(res.ok ? (res.data?.status || 'ok') : 'error');
     });
+    if (token) {
+      setLoadingStats(true);
+      api.dashboard(token).then((res) => {
+        if (!mounted) return;
+        if (res.ok && res.data) setStats(res.data);
+        setLoadingStats(false);
+      });
+    }
     return () => { mounted = false; };
   }, []);
 
@@ -33,40 +44,7 @@ export const Dashboard = () => {
         {t('dashboard.subtitle')}
       </Typography>
       <GettingStarted />
-      <Grid container spacing={2} sx={{ mt: 1 }}>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <StatCard icon={<PeopleOutlineIcon />} title="Leads" value="1,248" change="+12%" gradient="linear-gradient(135deg,#22d3ee80,#6366f180)" />
-        </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <StatCard icon={<MailOutlineIcon />} title="Emails" value="8,931" change="+5%" gradient="linear-gradient(135deg,#f472b680,#22d3ee80)" />
-        </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <StatCard icon={<LanOutlinedIcon />} title="Pipelines" value="3" change="Stable" gradient="linear-gradient(135deg,#6366f180,#22d3ee80)" />
-        </Grid>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <StatCard icon={<TrendingUpIcon />} title="Reply Rate" value="18.4%" change="+1.2%" gradient="linear-gradient(135deg,#22d3ee80,#f472b680)" />
-        </Grid>
-      </Grid>
-
-      <Grid container spacing={2} sx={{ mt: 1 }}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card className="glass">
-            <CardContent>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>System</Typography>
-              <Typography variant="h5" fontWeight={700} textTransform="capitalize">{t('dashboard.backend')}: {health}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card className="glass">
-            <CardContent>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>{t('dashboard.account')}</Typography>
-              <Typography variant="h5" fontWeight={700}>{account?.name}</Typography>
-              <Typography variant="body2" color="text.secondary">{t('dashboard.user')}: {user?.email}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      <ChartsGrid stats={stats} loading={loadingStats} health={health} />
     </>
   );
 };
@@ -85,6 +63,61 @@ function StatCard({ icon, title, value, change, gradient }: { icon: React.ReactN
         </Box>
       </CardContent>
     </Card>
+  );
+}
+
+function ChartsGrid({ stats, loading, health }: { stats: any; loading: boolean; health: string }) {
+  const leadsByStatus = Object.entries(stats?.leads?.by_status || {}).map(([name, value]) => ({ name, value: Number(value) }));
+  const leadsBySource = Object.entries(stats?.leads?.by_source || {}).map(([label, value]) => ({ id: label, value: Number(value), label }));
+  const weekly = (stats?.leads?.weekly_created || []).map((r: any) => ({ x: r.week, y: r.count }));
+  const campaignsByStatus = Object.entries(stats?.campaigns?.by_status || {}).map(([label, value]) => ({ id: label, value: Number(value), label }));
+  return (
+    <Grid container spacing={2} sx={{ mt: 1 }}>
+      <Grid size={{ xs: 12, md: 8 }}>
+        <Card className="glass">
+          <CardContent>
+            <Typography variant="subtitle2" color="text.secondary">Leads by Status</Typography>
+            {loading ? <CircularProgress size={20} /> : (
+              <SimpleBarChart data={leadsByStatus.map(d=>({ label: d.name, value: d.value }))} height={280} />
+            )}
+          </CardContent>
+        </Card>
+      </Grid>
+      <Grid size={{ xs: 12, md: 4 }}>
+        <Card className="glass">
+          <CardContent>
+            <Typography variant="subtitle2" color="text.secondary">System</Typography>
+            <Typography variant="h5" fontWeight={700} textTransform="capitalize">Backend: {health}</Typography>
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="subtitle2" color="text.secondary">Campaigns by Status</Typography>
+              {loading ? <CircularProgress size={20} /> : (
+                <SimplePieChart data={campaignsByStatus.map(d=>({ label: d.label as string, value: d.value as number }))} height={220} />
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+      <Grid size={{ xs: 12, md: 8 }}>
+        <Card className="glass">
+          <CardContent>
+            <Typography variant="subtitle2" color="text.secondary">Weekly Leads Created</Typography>
+            {loading ? <CircularProgress size={20} /> : (
+              <SimpleLineChart points={weekly} height={280} />
+            )}
+          </CardContent>
+        </Card>
+      </Grid>
+      <Grid size={{ xs: 12, md: 4 }}>
+        <Card className="glass">
+          <CardContent>
+            <Typography variant="subtitle2" color="text.secondary">Leads by Source</Typography>
+            {loading ? <CircularProgress size={20} /> : (
+              <SimplePieChart data={leadsBySource.map(d=>({ label: d.label as string, value: d.value as number }))} height={280} />
+            )}
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
   );
 }
 

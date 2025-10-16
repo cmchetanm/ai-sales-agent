@@ -56,6 +56,11 @@ export async function request<T>(path: string, options: RequestInit = {}, token?
 
 export const api = {
   health: () => request<{ status: string; timestamp: string }>('/api/v1/health'),
+  dashboard: (token: string) => request<{ leads: any; campaigns: any }>(
+    '/api/v1/dashboard',
+    {},
+    token
+  ),
   signIn: (email: string, password: string) =>
     request<{ user: any; token: string }>(
       '/api/v1/auth/sign_in',
