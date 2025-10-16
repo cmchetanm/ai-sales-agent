@@ -16,16 +16,11 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
-      include: ['src/components/**', 'src/hooks/**', 'src/utils/**'],
+      include: ['src/**/*.ts', 'src/**/*.tsx'],
       exclude: [
-        'src/pages/**',
-        'src/theme.tsx', 'src/App.tsx', 'src/main.tsx',
-        'src/components/Layout*.tsx', 'src/components/NavBar.tsx',
-        'src/components/CreateLeadDialog.tsx',
-        'src/components/LeadDetailsDialog.tsx',
-        'src/api/client.ts'
+        'src/theme.tsx', 'src/App.tsx', 'src/main.tsx', 'src/vite-env.d.ts'
       ],
-      thresholds: { lines: 80, statements: 80, functions: 55, branches: 60 }
+      thresholds: { lines: 100, statements: 100, functions: 100, branches: 100 }
     }
   }
 });

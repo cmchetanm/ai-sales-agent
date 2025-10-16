@@ -3,7 +3,7 @@
 require 'simplecov'
 SimpleCov.start do
   enable_coverage :branch
-  minimum_coverage 80
+  minimum_coverage 100
   add_filter %w[config spec app/channels app/jobs app/mailers]
   add_filter 'app/models/application_record.rb'
   add_filter 'app/jobs/application_job.rb'
