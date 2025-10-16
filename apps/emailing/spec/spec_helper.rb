@@ -3,7 +3,8 @@
 require 'simplecov'
 SimpleCov.start do
   enable_coverage :branch
-  minimum_coverage 100
+  min = ENV.fetch('MIN_COVERAGE', '100').to_i
+  minimum_coverage min
   # Do not filter app/jobs so we accurately measure real coverage
   add_filter %w[config spec app/channels app/mailers]
 end

@@ -70,13 +70,53 @@ def test_post_internal_json_jsonerror(monkeypatch):
 
 
 def test_reload_with_openai_env(monkeypatch):
-    # Ensure OPENAI branch executes without using network
+    # Ensure OPENAI import branch executes and succeeds with stubs
     monkeypatch.setenv('OPENAI_API_KEY', 'x')
+    import sys, types
+    mod_openai = types.ModuleType('langchain_openai')
+    class ChatOpenAI:
+        def __init__(self, *a, **k):
+            pass
+    mod_openai.ChatOpenAI = ChatOpenAI
+    monkeypatch.setitem(sys.modules, 'langchain_openai', mod_openai)
+    mod_tools = types.ModuleType('langchain.tools')
+    class StructuredTool: pass
+    mod_tools.StructuredTool = StructuredTool
+    monkeypatch.setitem(sys.modules, 'langchain.tools', mod_tools)
+    mod_pyd = types.ModuleType('pydantic')
+    class BaseModel: pass
+    def Field(*a, **k): return None
+    mod_pyd.BaseModel = BaseModel
+    mod_pyd.Field = Field
+    monkeypatch.setitem(sys.modules, 'pydantic', mod_pyd)
+    mod_schema = types.ModuleType('langchain.schema')
+    class HumanMessage: pass
+    class SystemMessage: pass
+    class AIMessage: pass
+    mod_schema.HumanMessage = HumanMessage
+    mod_schema.SystemMessage = SystemMessage
+    mod_schema.AIMessage = AIMessage
+    monkeypatch.setitem(sys.modules, 'langchain.schema', mod_schema)
+    mod_core = types.ModuleType('langchain_core.messages')
+    class ToolMessage: pass
+    mod_core.ToolMessage = ToolMessage
+    monkeypatch.setitem(sys.modules, 'langchain_core.messages', mod_core)
     import app.routes_chat as rc
     importlib.reload(rc)
-    # llm is allowed to be None if imports fail, but reaching here covers import branch
-    assert hasattr(rc, 'USE_OPENAI')
+    assert hasattr(rc, 'USE_OPENAI') and rc.USE_OPENAI is True
     # Reset
+    monkeypatch.delenv('OPENAI_API_KEY', raising=False)
+    importlib.reload(rc)
+
+
+def test_openai_import_failure_branch(monkeypatch):
+    # Force failure path for imports to hit except and set llm=None
+    monkeypatch.setenv('OPENAI_API_KEY', 'x')
+    import sys, types
+    monkeypatch.setitem(sys.modules, 'langchain_openai', types.ModuleType('langchain_openai'))
+    import app.routes_chat as rc
+    importlib.reload(rc)
+    assert rc.llm is None
     monkeypatch.delenv('OPENAI_API_KEY', raising=False)
     importlib.reload(rc)
 
@@ -128,6 +168,230 @@ def test_make_tools_and_call_tool_functions(monkeypatch):
     # error path when neither lead_ids nor filters provided
     err = by_name['create_lead_pack'].func(PK())
     assert err['status'] == 'error' and err['code'] == 400
+
+
+def test_candidate_tokens_primary_only(monkeypatch):
+    from app import routes_chat as rc
+    monkeypatch.setenv('INTERNAL_API_TOKEN', 'tok')
+    # Production env disables dev token fallback
+    monkeypatch.setenv('RAILS_ENV', 'production')
+    toks = rc._candidate_tokens()
+    assert toks == ['tok']
+
+
+def test_post_internal_success_and_exception(monkeypatch):
+    from app import routes_chat as rc
+    monkeypatch.setattr(rc, '_candidate_tokens', lambda: ['t'])
+    monkeypatch.setattr(rc, '_backend_bases', lambda: ['http://err403', 'http://ok'])
+
+    class C:
+        def __init__(self, timeout=None):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *a):
+            return False
+        class R:
+            def __init__(self, code):
+                self.status_code = code
+        def post(self, url, headers=None, json=None):
+            if url.startswith('http://err403'):
+                return self.R(403)
+            if url.startswith('http://ok'):
+                return self.R(200)
+            raise RuntimeError('boom')
+
+    monkeypatch.setattr(rc.httpx, 'Client', C)
+    ok, code = rc._post_internal('/p', {})
+    assert ok is True and code == 200
+    # exception path should be swallowed and continue
+    ok2, code2 = rc._post_internal('/p', {})
+    assert ok2 is True and code2 == 200
+
+
+def test_tool_discover_direct(monkeypatch):
+    from app import routes_chat as rc
+    monkeypatch.setattr(rc, 'llm', object())
+    monkeypatch.setattr(rc, '_queue_discovery_once', lambda *a, **k: (True, False, 200, {'sample': [{'first_name': 'A'}]}))
+    posted = []
+    monkeypatch.setattr(rc, '_post_internal', lambda *a, **k: posted.append(a) or (True, 200))
+    tools = rc._make_tools(1, 's', 'en')
+    D = {t.name: t for t in tools}['discover_leads']
+    args = D.args_schema()
+    out = D.func(args)
+    assert out['queued'] is True and posted
+
+
+def test_create_lead_pack_with_filters(monkeypatch):
+    from app import routes_chat as rc
+    monkeypatch.setattr(rc, 'llm', object())
+    monkeypatch.setattr(rc, '_post_internal_json', lambda *a, **k: (True, 200, {'lead_pack': {'id': 2}}))
+    tools = rc._make_tools(1, 's', 'en')
+    # Call func directly with a duck-typed object exposing filters.model_dump
+    func = {t.name: t for t in tools}['create_lead_pack'].func
+    class F: 
+        def model_dump(self, exclude_none=True):
+            return {'keywords': 'ai'}
+    class Inp:
+        lead_ids = None
+        filters = F()
+        name = None
+    out = func(Inp())
+    assert out['status'] == 'ok'
+
+
+def test_finalize_success_content(monkeypatch):
+    import app.routes_chat as rc
+    class LLM:
+        def __init__(self):
+            self.called = 0
+        def bind_tools(self, tools, tool_choice=None):
+            return self
+        def invoke(self, messages):
+            self.called += 1
+            if any(getattr(m, 'content', '').startswith('Conclude now') for m in messages):
+                return types.SimpleNamespace(tool_calls=None, content='final content')
+            return types.SimpleNamespace(tool_calls=[{'name': 'nonexistent', 'args': {}, 'id': 'z'}])
+    monkeypatch.setattr(rc, 'llm', LLM())
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    r = client.post('/chat/messages', json={'session_id': 's', 'account_id': 1, 'user_id': 1, 'messages': [{'role': 'user', 'content': 'loop'}]})
+    assert r.status_code == 200 and r.json()['reply'] == 'final content'
+
+
+def test_post_internal_json_tokens_none_and_exception(monkeypatch):
+    from app import routes_chat as rc
+    # no tokens
+    monkeypatch.setattr(rc, '_candidate_tokens', lambda: [''])
+    ok, code, data = rc._post_internal_json('/x', {})
+    assert (ok, code, data) == (False, 0, {})
+    # exception path in httpx
+    monkeypatch.setattr(rc, '_candidate_tokens', lambda: ['t'])
+    monkeypatch.setattr(rc, '_backend_bases', lambda: ['http://a'])
+    class C:
+        def __init__(self, timeout=None):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *a):
+            return False
+        def post(self, *a, **k):
+            raise RuntimeError('err')
+    monkeypatch.setattr(rc.httpx, 'Client', C)
+    ok, code, data = rc._post_internal_json('/y', {})
+    assert ok is False and code == 403
+
+
+def test_make_tools_llm_none_returns_empty(monkeypatch):
+    from app import routes_chat as rc
+    monkeypatch.setattr(rc, 'llm', None)
+    assert rc._make_tools(1, 's', 'en') == []
+
+
+def test_tool_db_preview_error(monkeypatch):
+    from app import routes_chat as rc
+    monkeypatch.setattr(rc, 'llm', object())
+    monkeypatch.setattr(rc, '_post_internal_json', lambda *a, **k: (False, 500, {}))
+    tools = rc._make_tools(1, 's', 'en')
+    P = {t.name: t for t in tools}['db_preview_leads'].args_schema
+    res = {t.name: t for t in tools}['db_preview_leads'].func(P())
+    assert res['status'] == 'error'
+
+
+def test_ai_ignores_other_roles(monkeypatch):
+    import app.routes_chat as rc
+    class LLM:
+        def bind_tools(self, tools, tool_choice=None):
+            return self
+        def invoke(self, messages):
+            return types.SimpleNamespace(tool_calls=None, content='ok')
+    monkeypatch.setattr(rc, 'llm', LLM())
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    # Include an assistant role to hit the branch
+    r = client.post('/chat/messages', json={'session_id': 's', 'account_id': 1, 'user_id': 1, 'messages': [
+        {'role': 'assistant', 'content': 'prev'},
+        {'role': 'system', 'content': 'noop'}
+    ]})
+    assert r.status_code == 200 and r.json()['reply'] == 'ok'
+
+
+def test_profile_update_exception_swallowed(monkeypatch):
+    import app.routes_chat as rc
+    class LLM:
+        def bind_tools(self, tools, tool_choice=None):
+            return self
+        def invoke(self, messages):
+            return types.SimpleNamespace(tool_calls=None, content='ok')
+    monkeypatch.setattr(rc, 'llm', LLM())
+    monkeypatch.setattr(rc, '_post_internal', lambda *a, **k: (_ for _ in ()).throw(RuntimeError('fail')))
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    r = client.post('/chat/messages', json={'session_id': 's', 'account_id': 1, 'user_id': 1, 'messages': [{'role': 'user', 'content': 'hello'}]})
+    assert r.status_code == 200 and r.json()['reply'] == 'ok'
+
+
+def test_tool_unserializable_result_path(monkeypatch):
+    import app.routes_chat as rc
+    class BadTool:
+        name = 'bad'
+        def invoke(self, args):
+            return object()  # not JSON serializable
+    class LLM:
+        def bind_tools(self, tools, tool_choice=None):
+            self.tools = tools + [BadTool()]
+            return self
+        def invoke(self, messages):
+            if not hasattr(self, 'x'):
+                self.x = 1
+                return types.SimpleNamespace(tool_calls=[{'name': 'bad', 'args': {}, 'id': 'id1'}])
+            return types.SimpleNamespace(tool_calls=None, content='done')
+    monkeypatch.setattr(rc, 'llm', LLM())
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    r = client.post('/chat/messages', json={'session_id': 's', 'account_id': 1, 'user_id': 1, 'messages': [{'role': 'user', 'content': 'x'}]})
+    assert r.status_code == 200 and r.json()['reply'] == 'done'
+
+
+def test_finalize_default_and_exception(monkeypatch):
+    import app.routes_chat as rc
+    # default message when finalization content empty or has tool_calls
+    class LLM1:
+        def bind_tools(self, tools, tool_choice=None):
+            return self
+        def invoke(self, messages):
+            # Always returns a tool call so the loop completes and triggers finalize
+            return types.SimpleNamespace(tool_calls=[{'name': 'nonexistent', 'args': {}, 'id': 'z'}])
+    monkeypatch.setattr(rc, 'llm', LLM1())
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    r = client.post('/chat/messages', json={'session_id': 's', 'account_id': 1, 'user_id': 1, 'messages': [{'role': 'user', 'content': 'no tools'}]})
+    assert r.status_code == 200 and 'share a sample' in r.json()['reply'].lower()
+    # exception path during finalization
+    class LLM2:
+        def bind_tools(self, tools, tool_choice=None):
+            return self
+        def invoke(self, messages):
+            # During finalize, raise; otherwise return a tool call to progress the loop
+            if any(getattr(m, 'content', '').startswith('Conclude now') for m in messages):
+                raise RuntimeError('fail')
+            return types.SimpleNamespace(tool_calls=[{'name': 'nonexistent', 'args': {}, 'id': 'z'}])
+    monkeypatch.setattr(rc, 'llm', LLM2())
+    r2 = client.post('/chat/messages', json={'session_id': 's', 'account_id': 1, 'user_id': 1, 'messages': [{'role': 'user', 'content': 'no tools'}]})
+    assert r2.status_code == 200 and 'share a sample' in r2.json()['reply'].lower()
+
+
+def test_health_endpoint():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    res = client.get('/health')
+    assert res.status_code == 200 and res.json()['status'] == 'ok'
 
 
 def test_server_assist_preview_discover_apollo(monkeypatch):

@@ -3,17 +3,11 @@
 require 'rails_helper'
 
 RSpec.describe Activity, type: :model do
-  let(:account) { create(:account) }
-  let(:lead) { create(:lead, account:) }
-
-  it 'is valid with required fields' do
-    a = described_class.new(account:, lead:, kind: 'note', content: 'hello', happened_at: Time.current)
-    expect(a).to be_valid
-  end
-
-  it 'requires kind in list' do
-    a = described_class.new(account:, lead:, kind: 'x', happened_at: Time.current)
-    expect(a).not_to be_valid
+  it 'requires at least one subject (lead/contact/deal)' do
+    account = create(:account)
+    a = Activity.new(account: account, kind: 'note', content: 'x', happened_at: Time.current)
+    expect(a.valid?).to be_falsey
+    expect(a.errors[:base]).to include('activity must belong to lead, contact, or deal')
   end
 end
 

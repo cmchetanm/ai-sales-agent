@@ -137,7 +137,7 @@ seed-all: seed
 
 backend-test:
 	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
-	@$(DOCKER_COMPOSE) run --rm -e RAILS_ENV=test $(BACKEND_SERVICE) bash -lc "(bundle check || bundle install) && bundle exec rails db:prepare && bundle exec rspec"
+	@$(DOCKER_COMPOSE) run --rm -e RAILS_ENV=test -e MIN_COVERAGE=${MIN_COVERAGE:-100} $(BACKEND_SERVICE) bash -lc "(bundle check || bundle install) && bundle exec rails db:prepare && bundle exec rspec"
 
 # Run a subset of backend specs: make backend-spec SPEC=spec/requests/..._spec.rb
 backend-spec:
@@ -147,7 +147,7 @@ backend-spec:
 
 emailing-test:
 	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
-	@$(DOCKER_COMPOSE) run --rm -e RAILS_ENV=test $(EMAILING_SERVICE) bash -lc "(bundle check || bundle install) && bundle exec rails db:prepare && bundle exec rspec"
+	@$(DOCKER_COMPOSE) run --rm -e RAILS_ENV=test -e MIN_COVERAGE=${MIN_COVERAGE:-100} $(EMAILING_SERVICE) bash -lc "(bundle check || bundle install) && bundle exec rails db:prepare && bundle exec rspec"
 
 emailing-dispatch:
 	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
