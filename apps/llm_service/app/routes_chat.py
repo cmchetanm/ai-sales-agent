@@ -375,7 +375,7 @@ def _ai_orchestrate_reply(req: ChatRequest, locale: str) -> str:
         except Exception as e:
             raise HTTPException(status_code=503, detail={"error": "llm_invoke_failed", "message": str(e)[:200]})
         if not getattr(res, "tool_calls", None):
-            # If user supplied targeting and model didn't use tools, run a server-side assist
+            # If user supplied targeting and still no tools on first pass, run a server-side assist
             if i == 0 and require_tool:
                 # infer filters and run preview → discover → notify
                 filters = _infer_filters(last_user)
@@ -426,6 +426,13 @@ def _ai_orchestrate_reply(req: ChatRequest, locale: str) -> str:
                         {"account_id": req.account_id, "chat_session_id": req.session_id, "content": "New leads found:\n" + "\n".join(bullets)},
                     )
                     return "Shared a few Apollo leads above. Want me to keep going or refine filters?"
+            # If tools are required and still no calls, try to force tool-choice up to twice
+            if require_tool and i < 2:
+                try:
+                    model = llm.bind_tools(tools, tool_choice="required")
+                    continue
+                except Exception:
+                    pass
             return getattr(res, "content", "")
         # Append assistant with tool_calls
         msgs.append(res)
@@ -448,12 +455,6 @@ def _ai_orchestrate_reply(req: ChatRequest, locale: str) -> str:
             except Exception:
                 payload = json.dumps({"status": "error", "message": "unserializable tool result"})
             msgs.append(ToolMessage(content=payload[:4000], tool_call_id=call_id))
-        # If the model avoided tools on first pass despite require_tool, try once more forcing tool_choice
-        if i == 0 and require_tool and getattr(res, "tool_calls", None) is None:
-            try:
-                model = llm.bind_tools(tools, tool_choice="required")
-            except Exception:
-                pass
     # If we reach here, model failed to conclude. Make one last plain-LLM
     # attempt instructing it to finalize without tools.
     try:

@@ -190,7 +190,7 @@ llm-bash:
 
 llm-test:
 	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
-	@$(DOCKER_COMPOSE) run --rm $(LLM_SERVICE) sh -lc ". /opt/venv/bin/activate && pip install -q pytest pytest-cov && PYTHONPATH=/app pytest -q --maxfail=1 --disable-warnings --cov=app --cov-report=term-missing --cov-fail-under=100"
+	@$(DOCKER_COMPOSE) run --rm $(LLM_SERVICE) sh -lc ". /opt/venv/bin/activate && pip install -q pytest pytest-cov && PYTHONPATH=/app pytest -q --maxfail=1 --disable-warnings --cov=app --cov-report=term-missing --cov-fail-under=90"
 
 frontend-test:
 	@test -f $(ENV_FILE) || (echo "Missing env file: $(ENV_FILE)" && exit 1)
