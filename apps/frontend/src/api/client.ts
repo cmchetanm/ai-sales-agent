@@ -133,11 +133,6 @@ export const api = {
     { method: 'POST', body: JSON.stringify({ activity: attrs }) },
     token
   ),
-  leadsQualify: (token: string, leadId: number) => request<{ status: string }>(
-    `/api/v1/leads/${leadId}/qualify`,
-    { method: 'POST' },
-    token
-  ),
   leadsDelete: (token: string, id: number) => request<void>(
     `/api/v1/leads/${id}`,
     { method: 'DELETE' },

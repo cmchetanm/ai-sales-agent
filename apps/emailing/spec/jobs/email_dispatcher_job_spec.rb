@@ -24,7 +24,8 @@ RSpec.describe EmailDispatcherJob, type: :job do
       end
     end
     # Ensure minimal parent rows exist to satisfy foreign keys
-    plan_id = conn.select_value("INSERT INTO plans (name, slug, monthly_price_cents, features, limits, active, created_at, updated_at) VALUES ('Basic','basic',0,'{}','{}',true,NOW(),NOW()) RETURNING id")
+    plan_id = conn.select_value("SELECT id FROM plans WHERE slug='basic'") ||
+              conn.select_value("INSERT INTO plans (name, slug, monthly_price_cents, features, limits, active, created_at, updated_at) VALUES ('Basic','basic',0,'{}','{}',true,NOW(),NOW()) RETURNING id")
     acc_id = conn.select_value("INSERT INTO accounts (name, plan_id, plan_assigned_at, active, settings, created_at, updated_at) VALUES ('Test', #{plan_id}, NOW(), true, '{}'::jsonb, NOW(), NOW()) RETURNING id")
     pipe_id = conn.select_value("INSERT INTO pipelines (account_id, name, status, stage_definitions, \"primary\", created_at, updated_at) VALUES (#{acc_id}, 'P', 'active', '[]', false, NOW(), NOW()) RETURNING id")
     camp_id = conn.select_value("INSERT INTO campaigns (account_id, pipeline_id, name, channel, status, audience_filters, schedule, metrics, created_at, updated_at) VALUES (#{acc_id}, #{pipe_id}, 'C', 'email', 'running', '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, NOW(), NOW()) RETURNING id")
