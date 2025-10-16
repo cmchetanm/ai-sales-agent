@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
-import { Button, Card, CardContent, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel, Chip, Stack } from '@mui/material';
+import { Button, Card, CardContent, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TableSortLabel, Chip, Stack, ToggleButtonGroup, ToggleButton } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -15,6 +15,9 @@ import { StatusChip } from '../components/StatusChip';
 import { TableSkeletonRows } from '../components/TableSkeleton';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import { useLocation } from 'react-router-dom';
+import ViewColumnIcon from '@mui/icons-material/ViewColumn';
+import TableRowsIcon from '@mui/icons-material/TableRows';
+import { PipelineBoard } from '../components/PipelineBoard';
 
 export const Pipelines = () => {
   const { token } = useAuth();
@@ -33,6 +36,7 @@ export const Pipelines = () => {
   const [q, setQ] = useQueryState('q', '');
   const { t } = useTranslation();
   const location = useLocation();
+  const [view, setView] = useState<'table'|'board'>(() => (localStorage.getItem('pipelines_view') as any) || 'table');
 
   const load = async (targetPage = page) => {
     if (!token) return;
@@ -95,8 +99,13 @@ export const Pipelines = () => {
         <CardContent sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setCreateOpen(true)}>{t('pipelines.new')}</Button>
           <SearchBar value={q} onChange={setQ} placeholder={t('pipelines.search')} />
+          <ToggleButtonGroup size="small" exclusive value={view} onChange={(_,v)=>{ if(v){ setView(v); try{ localStorage.setItem('pipelines_view', v);}catch{} } }}>
+            <ToggleButton value="table" aria-label="table"><TableRowsIcon fontSize="small" />&nbsp;Table</ToggleButton>
+            <ToggleButton value="board" aria-label="board"><ViewColumnIcon fontSize="small" />&nbsp;Board</ToggleButton>
+          </ToggleButtonGroup>
         </CardContent>
       </Card>
+      {view === 'table' ? (
       <TableContainer component={Card} className="glass slide-up" sx={{ position: 'relative' }}>
         <Table size="small">
           <TableHead>
@@ -137,6 +146,15 @@ export const Pipelines = () => {
           </TableBody>
         </Table>
       </TableContainer>
+      ) : (
+        <Card className="glass slide-up" sx={{ p: 2 }}>
+          {items.length > 0 ? (
+            <PipelineBoard pipelineId={items[0]?.id} />
+          ) : (
+            <Typography variant="body2" color="text.secondary">{t('pipelines.search')}</Typography>
+          )}
+        </Card>
+      )}
       <PaginationControls page={page} pages={pages} onPageChange={(p) => load(p)} disabled={loading} />
 
       <Dialog open={!!editing} onClose={() => setEditing(null)}>
