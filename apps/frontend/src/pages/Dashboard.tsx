@@ -15,17 +15,12 @@ import { SimpleBarChart, SimpleLineChart, SimplePieChart } from '../components/S
 
 export const Dashboard = () => {
   const { token, user, account } = useAuth();
-  const [health, setHealth] = useState<string>('...');
   const [stats, setStats] = useState<any | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const { t } = useTranslation();
 
   useEffect(() => {
     let mounted = true;
-    api.health().then((res) => {
-      if (!mounted) return;
-      setHealth(res.ok ? (res.data?.status || 'ok') : 'error');
-    });
     if (token) {
       setLoadingStats(true);
       api.dashboard(token).then((res) => {
@@ -44,7 +39,7 @@ export const Dashboard = () => {
         {t('dashboard.subtitle')}
       </Typography>
       <GettingStarted />
-      <ChartsGrid stats={stats} loading={loadingStats} health={health} />
+      <ChartsGrid stats={stats} loading={loadingStats} />
     </>
   );
 };
@@ -66,11 +61,10 @@ function StatCard({ icon, title, value, change, gradient }: { icon: React.ReactN
   );
 }
 
-function ChartsGrid({ stats, loading, health }: { stats: any; loading: boolean; health: string }) {
+function ChartsGrid({ stats, loading }: { stats: any; loading: boolean }) {
   const leadsByStatus = Object.entries(stats?.leads?.by_status || {}).map(([name, value]) => ({ name, value: Number(value) }));
   const leadsBySource = Object.entries(stats?.leads?.by_source || {}).map(([label, value]) => ({ id: label, value: Number(value), label }));
   const weekly = (stats?.leads?.weekly_created || []).map((r: any) => ({ x: r.week, y: r.count }));
-  const campaignsByStatus = Object.entries(stats?.campaigns?.by_status || {}).map(([label, value]) => ({ id: label, value: Number(value), label }));
   return (
     <Grid container spacing={2} sx={{ mt: 1 }}>
       <Grid size={{ xs: 12, md: 8 }}>
@@ -80,20 +74,6 @@ function ChartsGrid({ stats, loading, health }: { stats: any; loading: boolean; 
             {loading ? <CircularProgress size={20} /> : (
               <SimpleBarChart data={leadsByStatus.map(d=>({ label: d.name, value: d.value }))} height={280} />
             )}
-          </CardContent>
-        </Card>
-      </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
-        <Card className="glass">
-          <CardContent>
-            <Typography variant="subtitle2" color="text.secondary">System</Typography>
-            <Typography variant="h5" fontWeight={700} textTransform="capitalize">Backend: {health}</Typography>
-            <Box sx={{ mt: 1 }}>
-              <Typography variant="subtitle2" color="text.secondary">Campaigns by Status</Typography>
-              {loading ? <CircularProgress size={20} /> : (
-                <SimplePieChart data={campaignsByStatus.map(d=>({ label: d.label as string, value: d.value as number }))} height={220} />
-              )}
-            </Box>
           </CardContent>
         </Card>
       </Grid>
